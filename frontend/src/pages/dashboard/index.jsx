@@ -7,12 +7,14 @@ import {
 import { 
   authenticatedUserProfile, 
   userMonthlyFinancialSummary, 
-  financialTransactionsHistory 
+  financialTransactionsHistory, 
+  sixMonthCashFlow
 } from '@/data/mockData';
 
 import SummaryCard from './SummaryCard';
 import BudgetProgress from './BudgetProgress';
 import RecentTransactions from './RecentTransactions';
+import CashFlowChart from './CashflowChart';
 
 export default function Dashboard() {
   // Destructuring the user financial summary
@@ -68,15 +70,9 @@ export default function Dashboard() {
       {/* Detailed Widgets */}
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         
-        {/* Transactions */}
+        {/* Transactions (Charts and Recent Transactions) */}
         <div className="lg:col-span-2 space-y-8">
-          
-          {/* Leaving this for later */}
-          <div className="flex h-72 flex-col items-center justify-center rounded-3xl border border-dashed border-slate-300 bg-slate-50 text-slate-500">
-            <p className="font-medium text-slate-600">Analytics Chart Area</p>
-            <p className="text-sm">Recharts visualization goes here in later</p>
-          </div>
-
+          <CashFlowChart data={sixMonthCashFlow} />
           <RecentTransactions transactions={financialTransactionsHistory} />
         </div>
 

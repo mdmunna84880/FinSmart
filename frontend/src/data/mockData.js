@@ -87,3 +87,37 @@ export const availableTransactionCategories = [
   "Investment", 
   "Other"
 ];
+
+// Six month monthly income and expenses
+export const sixMonthCashFlow = [
+  { 
+    month: 'Oct', 
+    income: 4200, 
+    expenses: 3100 
+  },
+  { 
+    month: 'Nov', 
+    income: 4200, 
+    expenses: 3800 
+  },
+  { 
+    month: 'Dec', 
+    income: 4800, 
+    expenses: 4500
+  }, 
+  { 
+    month: 'Jan', 
+    income: 4200, 
+    expenses: 2800
+  },
+  { 
+    month: 'Feb', 
+    income: 4500, 
+    expenses: 3000 
+  },
+  { 
+    month: 'Mar', 
+    income: 4500, 
+    expenses: 3200 
+  },
+];
