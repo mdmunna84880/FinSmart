@@ -310,3 +310,47 @@ export const sixMonthCashFlow = [
     expenses: 3200 
   },
 ];
+
+// Formatted specifically for a Recharts Pie/Donut Chart
+export const categorySpending = [
+  { name: 'Housing', value: 2100, color: '#6366f1' },
+  { name: 'Food', value: 850, color: '#10b981' },
+  { name: 'Transportation', value: 340, color: '#f59e0b' },
+  { name: 'Shopping', value: 410, color: '#ec4899' },
+  { name: 'Entertainment', value: 220, color: '#8b5cf6' },
+  { name: 'Utilities', value: 180, color: '#0ea5e9' },
+];
+
+// Formatted for our Budget Progress List component
+export const categoryBudgets = [
+  { 
+    id: 'budg_01', 
+    category: 'Food', 
+    spent: 850, 
+    limit: 800
+  }, 
+  { 
+    id: 'budg_02', 
+    category: 'Shopping', 
+    spent: 410, 
+    limit: 500
+  }, 
+  { 
+    id: 'budg_03', 
+    category: 'Transportation', 
+    spent: 340, 
+    limit: 400
+  }, 
+  { 
+    id: 'budg_04', 
+    category: 'Entertainment', 
+    spent: 220, 
+    limit: 300
+  }, 
+  { 
+    id: 'budg_05', 
+    category: 'Utilities', 
+    spent: 180, 
+    limit: 200
+  }, 
+];
