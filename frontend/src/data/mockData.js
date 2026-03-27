@@ -2,7 +2,24 @@ export const authenticatedUserProfile = {
   userAccountId: "mdmunna84880",
   userFullName: "Md Munna",
   userEmailAddress: "mdmunna19434@gmail.com",
+  userPhone: "+91 7050498963",
   userAvatarInitials: "MM",
+  userAvatar: "https://ui-avatars.com/api/?name=Md+Munna&background=10b981&color=fff&size=256",
+
+  address: {
+    street: "123 Tech Park, Block C",
+    city: "Bengaluru",
+    state: "Karnataka",
+    zipCode: "560100"
+  },
+  
+  panNumber: "ABCDE1234F",
+  linkedBank: {
+    bankName: "HDFC Bank",
+    accountType: "Savings",
+    accountNumberLast4: "4567",
+    ifscCode: "HDFC0001234"
+  }
 };
 
 export const userMonthlyFinancialSummary = {
