@@ -14,7 +14,7 @@ import {
 import SummaryCard from './SummaryCard';
 import BudgetProgress from './BudgetProgress';
 import RecentTransactions from './RecentTransactions';
-import CashFlowChart from './CashflowChart';
+import CashFlowChart from './CashFlowChart';
 
 export default function Dashboard() {
   // Destructuring the user financial summary
