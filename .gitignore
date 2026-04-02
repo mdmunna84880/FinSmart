@@ -24,3 +24,5 @@ dist-ssr
 *.sw?
 .env
 frontend/src/pages/playground
+FinSmart_API.postman_collection.json
+.qwen

@@ -74,3 +74,18 @@ export const logoutUser = async (req, res, next) => {
             message: "User logged out successfully"
         });
 };
+
+// Retrieve current authenticated user profile
+export const getUserProfile = async (req, res, next) => {
+    const user = await User.findById(req.user._id).select("-password -__v");
+    
+    if (!user) {
+        throw new AppError("User not found", 404);
+    }
+    
+    return res.status(200).json({
+        success: true,
+        message: "User profile retrieved successfully",
+        data: user
+    });
+};
