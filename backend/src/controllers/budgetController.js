@@ -16,7 +16,7 @@ export const setBudget = async (req, res, next) => {
                 categoryLimits: categoryLimits || []
             }
         },
-        { new: true, upsert: true, runValidators: true }
+        { returnDocument: 'after', upsert: true, runValidators: true }
     );
 
     return res.status(200).json({
@@ -54,7 +54,7 @@ export const getBudgetSummary = async (req, res, next) => {
 
     // Fetch the user's budget settings for this specific month
     const budget = await Budget.findOne({ userId: req.user._id, year, month });
-    
+
     // Default budget values if they haven't set one yet
     const monthlyLimit = budget ? budget.monthlyBudget : 0;
     const configuredCategories = budget && budget.categoryLimits ? budget.categoryLimits : [];
