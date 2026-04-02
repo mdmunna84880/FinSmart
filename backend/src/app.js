@@ -5,6 +5,8 @@ import cookieParser from "cookie-parser";
 import AppError from "./utils/AppError.js";
 import { globalErrorHandler } from "./middlewares/errorMiddleware.js";
 import userRouter from "./routes/userRoutes.js";
+import transactionRouter from "./routes/transactionRoutes.js";
+import budgetRouter from "./routes/budgetRoutes.js";
 
 const app = express();
 
@@ -20,6 +22,8 @@ app.get("/", (req, res) => {
 
 // API Routes
 app.use("/api/users", userRouter);
+app.use("/api/transactions", transactionRouter);
+app.use("/api/budgets", budgetRouter);
 
 // Handle 404 routes
 app.use((req, res, next) => {
