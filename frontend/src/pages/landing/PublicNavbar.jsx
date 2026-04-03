@@ -14,13 +14,13 @@ export default function PublicNavbar() {
           {/* Call to Action Links */}
           <div className="flex items-center gap-4">
             <Link 
-              to="/dashboard" 
+              to="/login" 
               className="text-sm font-semibold text-slate-600 transition-colors hover:text-slate-900"
             >
               Log in
             </Link>
             <Link 
-              to="/dashboard" 
+              to="/register" 
               className={cn(
                 "rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white",
                 "transition-all hover:bg-slate-800 hover:shadow-md"

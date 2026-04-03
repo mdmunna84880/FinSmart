@@ -32,7 +32,7 @@ export default function Hero() {
           {/* Calls to Action */}
           <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <Link 
-              to="#" 
+              to="/register" 
               className="group flex w-full items-center justify-center gap-2 rounded-full bg-brand-500 px-8 py-3.5 text-base font-semibold text-white transition-all hover:bg-brand-600 hover:shadow-lg hover:shadow-brand-500/30 sm:w-auto"
             >
               Open Free Account

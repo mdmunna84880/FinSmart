@@ -86,10 +86,8 @@ export const authSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // Logout
-      .addCase(logoutUser.fulfilled, (state, action) => {
+      .addCase(logoutUser.fulfilled, (state) => {
         state.user = null;
-        state.isSuccess = true;
-        state.message = action.payload.message;
       })
       // Get User Profile
       .addCase(getUserProfile.pending, (state) => {
