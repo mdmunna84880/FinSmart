@@ -1,5 +1,6 @@
 import { cn } from '@/utils/cn';
-import { useId } from 'react';
+import { useId, useState } from 'react';
+import { FiEye, FiEyeOff } from 'react-icons/fi';
 
 const Input = ({
   label,
@@ -13,8 +14,15 @@ const Input = ({
   ref,
   ...props
 }) => {
-  // Generate a random ID if none provided
-  const inputId = id || useId();
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+
+  const isPasswordField = type === 'password';
+  const inputType = isPasswordField ? (isPasswordVisible ? 'text' : 'password') : type;
+
+  // Adjust input padding based on the presence of right-aligned elements
+  const hasRightElement = RightIcon || isPasswordField;
 
   return (
     <div className="flex w-full flex-col space-y-1.5">
@@ -34,28 +42,37 @@ const Input = ({
         <input
           ref={ref}
           id={inputId}
-          type={type}
+          type={inputType}
           className={cn(
             "flex h-11 w-full rounded-lg border bg-white px-3 py-2 text-sm text-slate-900 transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50",
             error 
               ? "border-rose-500 focus-visible:ring-rose-500/20" 
               : "border-slate-300 focus-visible:border-brand-500 focus-visible:ring-brand-500/20",
-            LeftIcon ? "pl-10" : "",
-            RightIcon ? "pr-10" : "",
+            LeftIcon && "pl-10",
+            hasRightElement && "pr-10",
             className
           )}
           {...props}
         />
 
-        {RightIcon && (
+        {isPasswordField ? (
+          <button
+            type="button"
+            onClick={() => setIsPasswordVisible(!isPasswordVisible)}
+            className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-700 focus:outline-none"
+            aria-label={isPasswordVisible ? "Hide password" : "Show password"}
+          >
+            {isPasswordVisible ? <FiEyeOff className="text-lg" /> : <FiEye className="text-lg" />}
+          </button>
+        ) : RightIcon ? (
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400">
             <RightIcon className="text-lg" />
           </div>
-        )}
+        ) : null}
       </div>
 
       {(error || helperText) && (
-        <p className={cn("text-xs font-medium", error ? "text-rose-500" : "text-slate-500")}>
+        <p className={cn("text-xs font-medium mt-1", error ? "text-rose-500" : "text-slate-500")}>
           {error || helperText}
         </p>
       )}

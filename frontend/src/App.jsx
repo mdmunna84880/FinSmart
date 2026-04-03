@@ -1,5 +1,7 @@
+import { useEffect } from 'react';
 import { Routes, Route } from 'react-router';
 import { ToastContainer } from 'react-toastify';
+import { useDispatch, useSelector } from 'react-redux';
 
 import MainLayout from '@/components/layout/MainLayout';
 import Dashboard from '@/pages/dashboard';
@@ -8,8 +10,27 @@ import Analytics from '@/pages/analytics';
 import Profile from '@/pages/profile';
 import NotFound from '@/pages/not-found';
 import Landing from '@/pages/landing';
+import Login from '@/pages/auth/Login';
+import Register from '@/pages/auth/Register';
+import { getUserProfile } from '@/store/slices/authSlice';
+import Loading from './components/common/Loading';
 
 function App() {
+  const dispatch = useDispatch();
+  const { isCheckingAuth } = useSelector((state) => state.auth);
+
+  
+  // Validate session on application mount
+  useEffect(() => {
+    dispatch(getUserProfile());
+  }, [dispatch]);
+
+  // Render loading state while session verification is pending
+  if (isCheckingAuth) {
+    return (
+      <Loading />
+    );
+  }
 
   return (
     <div>
@@ -17,6 +38,10 @@ function App() {
       <Routes>
         {/* Public Landing Page */}
         <Route path="/" element={<Landing />} />
+        
+        {/* Authentication Pages */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
 
         {/* Authenticated App page*/}
         <Route element={<MainLayout />}>
