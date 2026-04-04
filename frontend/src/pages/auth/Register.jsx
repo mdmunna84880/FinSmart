@@ -64,7 +64,7 @@ export default function Register() {
             label="Password"
             type="password"
             leftIcon={FiLock}
-            placeholder="••••••••"
+            placeholder="abcde@1947"
             error={errors.password?.message}
             {...register('password')}
           />
@@ -73,7 +73,7 @@ export default function Register() {
             label="Confirm Password"
             type="password"
             leftIcon={FiLock}
-            placeholder="••••••••"
+            placeholder="abcde@1947"
             error={errors.confirmPassword?.message}
             {...register('confirmPassword')}
           />
