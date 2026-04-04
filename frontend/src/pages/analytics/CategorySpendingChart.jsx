@@ -1,21 +1,16 @@
 import { useState, useMemo } from 'react';
 import { formateToUS } from '@/utils/currencyFormater';
-import { 
-  PieChart, 
-  Pie, 
+import {
+  PieChart,
+  Pie,
   Tooltip,
-  ResponsiveContainer 
+  ResponsiveContainer
 } from 'recharts';
 
-export default function CategorySpendingChart({ data = [] }) {
+export default function CategorySpendingChart({ data = [], totalSpend = 0 }) {
   const [activeIndex, setActiveIndex] = useState(-1);
 
-  // Total spending
-  const totalSpend = useMemo(() => {
-    return data.reduce((sum, item) => sum + item.value, 0);
-  }, [data]);
-
-  // Modern Recharts Pattern: 
+  // Modern Recharts Pattern:
   const pieData = useMemo(() => {
     return data.map(item => ({
       ...item,
