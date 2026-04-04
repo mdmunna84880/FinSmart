@@ -89,3 +89,29 @@ export const getUserProfile = async (req, res, next) => {
         data: user
     });
 };
+
+// Change the authenticated user's password
+export const changePassword = async (req, res, next) => {
+    const { currentPassword, newPassword } = req.body;
+
+    const user = await User.findById(req.user._id);
+
+    if (!user) {
+        throw new AppError("User not found", 404);
+    }
+
+    const isCurrentPasswordValid = await user.isPasswordCorrect(currentPassword);
+
+    if (!isCurrentPasswordValid) {
+        throw new AppError("Current password is incorrect", 401);
+    }
+
+    user.password = newPassword;
+    await user.save();
+
+    return res.status(200).json({
+        success: true,
+        message: "Password changed successfully"
+    });
+};
+

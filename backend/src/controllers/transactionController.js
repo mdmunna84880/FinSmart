@@ -1,147 +1,80 @@
 import mongoose from "mongoose";
 import { Transaction } from "../models/Transaction.js";
 import AppError from "../utils/AppError.js";
+import { buildTransactionMatch } from "../services/transactionQueryService.js";
+import { getDynamicFilters } from "../repositories/transactionsRepository.js";
 
-// Add a new transaction
+// Create a new transaction record for the authenticated user
 export const addTransaction = async (req, res, next) => {
     const { amount, type, category, date, desc } = req.body;
 
     const transaction = await Transaction.create({
         userId: req.user._id,
-        amount,
-        type,
-        category,
+        amount, type, category, desc,
         date: date || Date.now(),
-        desc
     });
 
-    return res.status(201).json({
-        success: true,
-        message: "Transaction created successfully",
-        data: transaction
-    });
+    return res.status(201).json({ success: true, message: "Transaction created", data: transaction });
 };
 
-// Get all transactions with filtering and pagination
+// Fetch filtered and paginated transactions from the ledger
 export const getTransactions = async (req, res, next) => {
-    // Pagination defaults
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 20;
-    const skip = (page - 1) * limit;
 
-    // Build the filter
-    const matchFilters = { userId: req.user._id };
+    // Build query filters using the search service
+    const matchFilters = buildTransactionMatch(req.user._id, req.query);
 
-    if (req.query.type) {
-        matchFilters.type = req.query.type;
-    }
-
-    if (req.query.category) {
-        matchFilters.category = req.query.category;
-    }
-
-    if (req.query.month) {
-        const currentYear = req.query.year ? parseInt(req.query.year, 10) : new Date().getFullYear();
-        const monthNum = parseInt(req.query.month, 10);
-
-        // Start date and end date of the given month
-        const startDate = new Date(currentYear, monthNum - 1, 1);
-        const endDate = new Date(currentYear, monthNum, 1);
-
-        matchFilters.date = {
-            $gte: startDate,
-            $lt: endDate
-        };
-    }
-
-    // Get transactions based on the filter or defalt
-    const transactions = await Transaction.find(matchFilters)
-        .sort({ date: -1 })
-        .skip(skip)
-        .limit(limit);
-
-    // Get total documents
-    const totalTransactions = await Transaction.countDocuments(matchFilters);
+    // Retrieve transactions and total count in parallel
+    const [transactions, totalTransactions] = await Promise.all([
+        Transaction.find(matchFilters).sort({ date: -1 }).skip((page - 1) * limit).limit(limit),
+        Transaction.countDocuments(matchFilters)
+    ]);
 
     return res.status(200).json({
         success: true,
         data: transactions,
-        pagination: {
-            currentPage: page,
-            totalPages: Math.ceil(totalTransactions / limit),
-            totalTransactions,
-            limit
-        }
+        pagination: { currentPage: page, totalPages: Math.ceil(totalTransactions / limit), totalTransactions, limit }
     });
 };
 
-// Get single transaction details
+// Retrieve specific transaction details by ID
 export const getSingleTransaction = async (req, res, next) => {
-    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) throw new AppError("Invalid ID", 400);
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new AppError("Invalid transaction ID", 400);
-    }
+    const transaction = await Transaction.findOne({ _id: req.params.id, userId: req.user._id });
+    if (!transaction) throw new AppError("Transaction not found", 404);
 
-    const transaction = await Transaction.findOne({
-        _id: id,
-        userId: req.user._id
-    });
-
-    if (!transaction) {
-        throw new AppError("Transaction not found", 404);
-    }
-
-    return res.status(200).json({
-        success: true,
-        data: transaction
-    });
+    return res.status(200).json({ success: true, data: transaction });
 };
 
-// Update an existing transaction
+// Update existing transaction data based on record ID
 export const updateTransaction = async (req, res, next) => {
-    const { id } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new AppError("Invalid transaction ID", 400);
-    }
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) throw new AppError("Invalid ID", 400);
 
     const transaction = await Transaction.findOneAndUpdate(
-        { _id: id, userId: req.user._id },
+        { _id: req.params.id, userId: req.user._id },
         { ...req.body },
         { new: true, runValidators: true }
     );
+    if (!transaction) throw new AppError("Transaction not found", 404);
 
-    if (!transaction) {
-        throw new AppError("Transaction not found", 404);
-    }
-
-    return res.status(200).json({
-        success: true,
-        message: "Transaction updated successfully",
-        data: transaction
-    });
+    return res.status(200).json({ success: true, message: "Transaction updated", data: transaction });
 };
 
-// Delete a specific transaction
+// Remove a specific transaction record from the database
 export const deleteTransaction = async (req, res, next) => {
-    const { id } = req.params;
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) throw new AppError("Invalid ID", 400);
 
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        throw new AppError("Invalid transaction ID", 400);
-    }
+    const transaction = await Transaction.findOneAndDelete({ _id: req.params.id, userId: req.user._id });
+    if (!transaction) throw new AppError("Transaction not found", 404);
 
-    const transaction = await Transaction.findOneAndDelete({
-        _id: id,
-        userId: req.user._id
-    });
+    return res.status(200).json({ success: true, message: "Transaction deleted" });
+};
 
-    if (!transaction) {
-        throw new AppError("Transaction not found", 404);
-    }
+// Retrieve unique years, months, and categories for dynamic filtering
+export const getAvailableFilters = async (req, res, next) => {
+    const filters = await getDynamicFilters(req.user._id, req.query);
 
-    return res.status(200).json({
-        success: true,
-        message: "Transaction deleted successfully"
-    });
+    return res.status(200).json({ success: true, data: filters });
 };

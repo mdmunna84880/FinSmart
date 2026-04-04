@@ -28,3 +28,21 @@ export const loginSchema = Joi.object({
         "any.required": "Password is required"
     })
 });
+
+export const changePasswordSchema = Joi.object({
+    currentPassword: Joi.string().required().messages({
+        "string.empty": "Current password is required",
+        "any.required": "Current password is required"
+    }),
+    newPassword: Joi.string().min(8).required().disallow(Joi.ref("currentPassword")).messages({
+        "string.empty": "New password is required",
+        "string.min": "New password must be at least 8 characters",
+        "any.invalid": "New password must be different from the current password",
+        "any.required": "New password is required"
+    }),
+    confirmPassword: Joi.string().valid(Joi.ref("newPassword")).required().messages({
+        "any.only": "Passwords do not match",
+        "any.required": "Please confirm your new password"
+    })
+});
+

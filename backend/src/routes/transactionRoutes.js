@@ -4,7 +4,8 @@ import {
     getTransactions,
     getSingleTransaction,
     updateTransaction,
-    deleteTransaction
+    deleteTransaction,
+    getAvailableFilters
 } from "../controllers/transactionController.js";
 import { validateRequest } from "../middlewares/validateMiddleware.js";
 import { verifyJWT } from "../middlewares/authMiddleware.js";
@@ -14,6 +15,9 @@ const router = Router();
 
 // Verify whether the user exists
 router.use(verifyJWT);
+
+// Dynamic filters for dropdowns
+router.get("/filters", getAvailableFilters);
 
 // Create and Read routes for transactions
 router

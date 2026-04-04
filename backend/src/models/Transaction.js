@@ -15,16 +15,19 @@ const transactionSchema = new Schema(
         type: {
             type: String,
             enum: ["Income", "Expense"],
-            required: true
+            required: true,
+            index: true
         },
         category: {
             type: String,
             required: true,
+            index: true
         },
         date: {
             type: Date,
             default: Date.now,
-            required: true
+            required: true,
+            index: true
         },
         desc: {
             type: String,
@@ -35,5 +38,10 @@ const transactionSchema = new Schema(
         timestamps: true
     }
 );
+
+// Compound indexes to optimize common query patterns
+transactionSchema.index({ userId: 1, date: -1 });
+transactionSchema.index({ userId: 1, category: 1 });
+transactionSchema.index({ userId: 1, type: 1 });
 
 export const Transaction = model("Transaction", transactionSchema);
