@@ -57,6 +57,7 @@ export const getBudgetSummary = async (req, res, next) => {
 
     // Default budget values if they haven't set one yet
     const monthlyLimit = budget ? budget.monthlyBudget : 0;
+    const savingsTargetValue = budget ? budget.savingsTarget : 0;
     const configuredCategories = budget && budget.categoryLimits ? budget.categoryLimits : [];
 
     // Aggregate transactions to calculate Total Income, Total Expenses, and Expenses grouped by Category
@@ -112,6 +113,7 @@ export const getBudgetSummary = async (req, res, next) => {
             totalExpense,
             netSavings,
             monthlyBudget: monthlyLimit,
+            savingsTarget: savingsTargetValue,
             categoryBudgets
         }
     });
