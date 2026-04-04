@@ -1,5 +1,6 @@
 import { FiLock } from 'react-icons/fi';
 
+// Highlight data protection and encryption standards
 export default function Security() {
   return (
     <section className="border-t border-slate-200 bg-slate-50 py-16">
@@ -9,7 +10,7 @@ export default function Security() {
         </div>
         <h2 className="text-2xl font-bold text-slate-900">Bank-level security standards</h2>
         <p className="mt-4 text-lg text-slate-500 max-w-2xl">
-          Your data is encrypted using AES-256. We use read-only access for your transactions, ensuring your money cannot be moved, and we never sell your personal information.
+          Encrypt your data using AES-256. We maintain read-only access for transactions, ensuring your funds are never movable through the platform.
         </p>
       </div>
     </section>
