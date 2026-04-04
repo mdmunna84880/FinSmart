@@ -1,85 +1,49 @@
-# FinSmart API - Backend Server
+# FinSmart API — Backend
 
-[![Node.js](https://img.shields.io/badge/Node.js-ESM-339933?logo=node.js&logoColor=white)](https://nodejs.org)
-[![Express](https://img.shields.io/badge/Express-5.2.1-000000?logo=express&logoColor=white)](https://expressjs.com)
-[![MongoDB](https://img.shields.io/badge/MongoDB-Mongoose_9.3.3-47A24D?logo=mongodb&logoColor=white)](https://mongoosejs.com)
-[![JWT](https://img.shields.io/badge/Auth-JWT-000000?logo=json-web-tokens&logoColor=white)](https://jwt.io)
+A clean, no-nonsense REST API that powers the FinSmart personal finance dashboard. It handles user authentication, transaction tracking, and budget management — all backed by MongoDB and Express.js.
 
-RESTful API backend for the FinSmart Personal Finance Dashboard. Built with Express.js and MongoDB, featuring JWT authentication, transaction management, and budget tracking.
-
-> **📌 Project Context:** This project was built as part of **AlmaBetter's AlmaX Program — Week 6 Assignment**.
+> **Built for AlmaBetter's AlmaX Program — Week 6 Project**
 
 ---
 
-## Table of Contents
+## What This Does
 
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Prerequisites](#prerequisites)
-- [Installation](#installation)
-- [Configuration](#configuration)
-- [Available Scripts](#available-scripts)
-- [API Endpoints](#api-endpoints)
-- [Authentication](#authentication)
-- [Data Models](#data-models)
-- [Middlewares](#middlewares)
-- [Error Handling](#error-handling)
-- [Environment Variables](#environment-variables)
-- [Testing](#testing)
-- [Deployment](#deployment)
-- [Security](#security)
-- [Contributing](#contributing)
-- [License](#license)
-- [Author](#author)
+At its core, this backend gives the frontend everything it needs to run a personal finance app:
+
+- **Sign up, log in, log out** — JWT tokens delivered via HTTP-only cookies. No localStorage token nonsense.
+- **Track transactions** — Record income and expenses with categories, dates, and descriptions. Filter them by year, month, category, type, or free-text search.
+- **Set budgets** — Define monthly spending limits overall and per category. Get a summary that compares what you planned to spend against what you actually spent.
+- **Dynamic filter dropdowns** — The API surfaces which years, months, categories, and types actually exist in your data so the frontend doesn't show empty options.
 
 ---
 
-## Features
+## How It's Built
 
-### Core API Features
-Built for **AlmaX Week 6 Assignment**, FinSmart API includes:
+| Layer | What's Used |
+|-------|-------------|
+| Runtime | Node.js (ES modules) |
+| Framework | Express 5 |
+| Database | MongoDB via Mongoose 9 |
+| Auth | JWT in HTTP-only cookies |
+| Validation | Joi schemas |
+| Password Hashing | bcryptjs |
+| Logging | Morgan (dev mode) |
 
-- **User Authentication** - JWT-based auth with refresh token support
-- **User Management** - Registration, login, profile management
-- **Transaction CRUD** - Create, read, update, delete financial transactions
-- **Budget Management** - Set and track monthly budgets per category
-- **Protected Routes** - Middleware-based authentication guards
-- **Input Validation** - Joi schema validation for all inputs
-- **Error Handling** - Centralized error handling with custom error classes
-- **CORS Support** - Configured for frontend origin
-- **Cookie-based Auth** - Secure HTTP-only cookies for tokens
-- **Request Logging** - Morgan HTTP logger for debugging
-- **No-Cache Middleware** - Prevents cached responses on sensitive routes
+### Architecture
 
-### Security Features
-- Password hashing with bcryptjs
-- JWT access and refresh tokens
-- HTTP-only cookies
-- CORS origin restrictions
-- Input sanitization and validation
+The code follows a lightweight layered pattern:
 
----
+```
+Routes → Controllers → Services/Repositories → Models
+```
 
-## Tech Stack
+- **Routes** define endpoints and wire up validation + auth middleware.
+- **Controllers** handle request/response logic and business flow.
+- **Services** (`transactionQueryService.js`) build reusable query logic.
+- **Repositories** (`transactionsRepository.js`) handle raw data access and aggregation pipelines.
+- **Models** define schemas, indexes, and instance methods (password hashing, token generation).
 
-| Category | Technology | Version |
-|----------|------------|---------|
-| **Runtime** | Node.js | ESM Modules |
-| **Framework** | Express | 5.2.1 |
-| **Database** | MongoDB | Latest |
-| **ODM** | Mongoose | 9.3.3 |
-| **Authentication** | JWT | 9.0.3 |
-| **Password Hashing** | bcryptjs | 3.0.3 |
-| **Validation** | Joi | 18.1.2 |
-| **CORS** | cors | 2.8.6 |
-| **Cookie Parser** | cookie-parser | 1.4.7 |
-| **Logging** | morgan | 1.10.1 |
-| **Environment** | dotenv | 17.3.1 |
-
-### Development Tools
-- **Nodemon** - Auto-restart during development
-- **ES Modules** - Modern JavaScript module system
+It's not over-engineered — controllers talk directly to models for simple CRUD, and delegate to services/repositories when queries get more involved.
 
 ---
 
@@ -89,656 +53,269 @@ Built for **AlmaX Week 6 Assignment**, FinSmart API includes:
 backend/
 ├── src/
 │   ├── config/
-│   │   ├── db.js                # MongoDB connection handler
-│   │   └── env.js               # Environment variables loader
+│   │   ├── db.js              # MongoDB connection
+│   │   └── env.js             # Centralized env config
 │   │
 │   ├── controllers/
-│   │   ├── userController.js    # User auth & profile logic
-│   │   ├── transactionController.js  # Transaction CRUD operations
-│   │   └── budgetController.js  # Budget management logic
+│   │   ├── userController.js      # Auth & profile logic
+│   │   ├── transactionController.js  # Transaction CRUD + filters
+│   │   └── budgetController.js    # Budget settings & summaries
 │   │
-│   ├── middlewares/
-│   │   ├── authMiddleware.js    # JWT authentication guard
-│   │   ├── errorMiddleware.js   # Global error handler
-│   │   ├── validateMiddleware.js # Joi validation wrapper
-│   │   └── noCache.js           # Disable caching for sensitive routes
+│   ├── services/
+│   │   └── transactionQueryService.js  # Builds MongoDB query filters
+│   │
+│   ├── repositories/
+│   │   └── transactionsRepository.js   # Dynamic filter aggregations
 │   │
 │   ├── models/
-│   │   ├── User.js              # User schema with password hashing
-│   │   ├── Transaction.js       # Transaction schema (debit/credit)
-│   │   └── Budget.js            # Budget schema (category limits)
+│   │   ├── User.js              # User schema + JWT methods
+│   │   ├── Transaction.js       # Income/expense records
+│   │   └── Budget.js            # Monthly budget limits
 │   │
 │   ├── routes/
-│   │   ├── userRoutes.js        # Auth routes (/api/users)
-│   │   ├── transactionRoutes.js # Transaction routes (/api/transactions)
-│   │   └── budgetRoutes.js      # Budget routes (/api/budgets)
+│   │   ├── userRoutes.js        # /api/users/*
+│   │   ├── transactionRoutes.js # /api/transactions/*
+│   │   └── budgetRoutes.js      # /api/budgets/*
+│   │
+│   ├── middlewares/
+│   │   ├── authMiddleware.js    # JWT verification from cookie
+│   │   ├── validateMiddleware.js # Joi validation wrapper
+│   │   ├── errorMiddleware.js   # Global error handler
+│   │   └── noCache.js           # Disables browser caching
 │   │
 │   ├── utils/
 │   │   ├── AppError.js          # Custom error class
-│   │   ├── AuthValidation.js    # Auth Joi schemas
-│   │   ├── BudgetValidation.js  # Budget Joi schemas
-│   │   └── TransactionValidation.js # Transaction Joi schemas
+│   │   ├── AuthValidation.js    # Joi schemas for auth
+│   │   ├── BudgetValidation.js  # Joi schemas for budgets
+│   │   └── TransactionValidation.js # Joi schemas for transactions
 │   │
-│   ├── app.js                   # Express app configuration
+│   ├── app.js                   # Express app setup
 │   └── index.js                 # Server entry point
 │
-├── .env                         # Environment variables (not in git)
-├── .gitignore                   # Git ignore rules
-├── package.json                 # Dependencies and scripts
-└── README.md                    # This file
+├── .env                     # Environment variables (create your own)
+├── package.json
+└── README.md
 ```
 
 ---
 
-## Prerequisites
+## Getting It Running
 
-Before you begin, ensure you have the following installed:
+### Prerequisites
 
-- **Node.js** (v18 or higher) - [Download](https://nodejs.org/)
-- **npm** (v9 or higher) or **yarn** (v1.22+)
-- **MongoDB** - Local installation or MongoDB Atlas account
-- **Git** (optional, for version control)
+- **Node.js** v18+
+- **MongoDB** — either a local instance or MongoDB Atlas
+- **npm** (comes with Node.js)
 
-Verify your installation:
-
-```bash
-node --version
-npm --version
-```
-
----
-
-## Installation
-
-### 1. Clone the Repository
+### Setup
 
 ```bash
-git clone https://github.com/mdmunna84880/FinSmart
-cd backend
-```
-
-### 2. Install Dependencies
-
-```bash
+# Install dependencies
 npm install
-```
 
-### 3. Configure Environment Variables
+# Create a .env file with these values:
+# PORT=8000
+# MONGODB_URI=mongodb://localhost:27017
+# JWT_SECRET=something-long-and-random
+# JWT_EXPIRY=7d
+# NODE_ENV=development
 
-Create a `.env` file in the root directory:
-
-```env
-PORT=3000
-MONGODB_URI=mongodb://localhost:27017
-JWT_SECRET=your-super-secret-jwt-key-change-this-in-production
-JWT_EXPIRES_IN=1d
-JWT_REFRESH_SECRET=your-super-secret-refresh-key-change-this-in-production
-JWT_REFRESH_EXPIRES_IN=7d
-FRONTEND_URL=http://localhost:5173
-```
-
-### 4. Start the Server
-
-**Development Mode:**
-
-```bash
+# Start the dev server (auto-restarts on file changes)
 npm run dev
 ```
 
-**Production Mode:**
-
-```bash
-npm run start
-```
-
-The API will be available at `http://localhost:3000`
-
----
-
-## Configuration
-
-### Environment Setup
-
-The application uses `dotenv` to load environment variables from a `.env` file.
-
-| Variable | Description | Default | Required |
-|----------|-------------|---------|----------|
-| `PORT` | Server port | `3000` | No |
-| `MONGODB_URI` | MongoDB connection string | - | **Yes** |
-| `JWT_SECRET` | Secret for access tokens | - | **Yes** |
-| `JWT_EXPIRES_IN` | Access token expiry | `1d` | No |
-| `JWT_REFRESH_SECRET` | Secret for refresh tokens | - | **Yes** |
-| `JWT_REFRESH_EXPIRES_IN` | Refresh token expiry | `7d` | No |
-| `FRONTEND_URL` | Frontend origin for CORS | - | No |
-
-### CORS Configuration
-
-CORS is configured in `src/app.js` to allow requests from the frontend:
-
-```js
-app.use(cors({
-    origin: "http://localhost:5173",
-    credentials: true,
-}));
-```
-
-For production, update the `FRONTEND_URL` environment variable.
-
----
-
-## Available Scripts
-
-| Command | Description |
-|---------|-------------|
-| `npm run dev` | Start development server with nodemon (auto-restart) |
-| `npm run start` | Start production server |
+Server will be up at `http://localhost:8000`.
 
 ---
 
 ## API Endpoints
 
-### Base URL
+Base URL: `http://localhost:8000/api`
 
-```
-http://localhost:3000/api
-```
+### Users
 
-### Authentication Endpoints
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/users/register` | Create a new account | No |
+| POST | `/users/login` | Log in | No |
+| POST | `/users/logout` | Log out (clears cookie) | Yes |
+| GET | `/users/me` | Get your profile | Yes |
+| PUT | `/users/change-password` | Update password | Yes |
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `POST` | `/users/register` | Register new user | No |
-| `POST` | `/users/login` | Login user | No |
-| `POST` | `/users/logout` | Logout user | Yes |
-| `POST` | `/users/refresh-token` | Refresh access token | Yes (refresh token) |
-| `GET` | `/users/profile` | Get user profile | Yes |
-| `PUT` | `/users/profile` | Update user profile | Yes |
-| `PUT` | `/users/password` | Change password | Yes |
+### Transactions
 
-### Transaction Endpoints
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| GET | `/transactions/filters` | Get available filter options (years, months, categories, types) | Yes |
+| GET | `/transactions` | List transactions (paginated, filterable) | Yes |
+| GET | `/transactions/:id` | Get a single transaction | Yes |
+| POST | `/transactions` | Add a transaction | Yes |
+| PUT | `/transactions/:id` | Update a transaction | Yes |
+| DELETE | `/transactions/:id` | Delete a transaction | Yes |
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `GET` | `/transactions` | Get all transactions | Yes |
-| `GET` | `/transactions/:id` | Get single transaction | Yes |
-| `POST` | `/transactions` | Create new transaction | Yes |
-| `PUT` | `/transactions/:id` | Update transaction | Yes |
-| `DELETE` | `/transactions/:id` | Delete transaction | Yes |
-| `GET` | `/transactions/summary` | Get transaction summary | Yes |
+**Query parameters for listing transactions:**
+- `page` — page number (default: 1)
+- `limit` — items per page (default: 20)
+- `year` — filter by year
+- `month` — filter by month (1-12)
+- `category` — filter by category
+- `type` — filter by "Income" or "Expense"
+- `search` — free-text search across description, category, and type
 
-### Budget Endpoints
+### Budgets
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| `GET` | `/budgets` | Get all budgets | Yes |
-| `GET` | `/budgets/:id` | Get single budget | Yes |
-| `POST` | `/budgets` | Create new budget | Yes |
-| `PUT` | `/budgets/:id` | Update budget | Yes |
-| `DELETE` | `/budgets/:id` | Delete budget | Yes |
+| Method | Endpoint | Description | Auth |
+|--------|----------|-------------|------|
+| POST | `/budgets` | Set or update a budget (upsert) | Yes |
+| GET | `/budgets` | Get budget for a specific month/year | Yes |
+| GET | `/budgets/summary` | Get full budget summary with actual spending | Yes |
+
+**Query parameters for budget endpoints:**
+- `year` — defaults to current year
+- `month` — defaults to current month (1-12)
+
+The `/summary` endpoint is the interesting one — it aggregates your transactions for the month and tells you total income, total expenses, net savings, and how each category's spending compares to your set limit.
 
 ### Health Check
 
 | Method | Endpoint | Description |
 |--------|----------|-------------|
-| `GET` | `/` | Server status check |
+| GET | `/` | Returns "Server is running" |
 
 ---
 
 ## Authentication
 
-### JWT Token Flow
+Tokens are stored in HTTP-only cookies — the frontend doesn't need to manually attach them to requests. Here's the flow:
 
-1. User logs in with credentials
-2. Server generates access token (short-lived) and refresh token (long-lived)
-3. Tokens are stored in HTTP-only cookies
-4. Access token is used for authenticated requests
-5. When access token expires, use refresh token to get new access token
+1. **Register or login** → server sets a `token` cookie with a JWT.
+2. **Protected routes** → the `verifyJWT` middleware reads the token from the cookie (or `Authorization: Bearer` header as a fallback), decodes it, and attaches the user to `req.user`.
+3. **Logout** → server clears the cookie.
 
-### Token Structure
+The JWT contains the user's `_id` and `email`. Token expiry is controlled by `JWT_EXPIRY` in the `.env` file.
 
-```js
-{
-    id: "user-id",
-    email: "user@example.com",
-    iat: 1234567890,
-    exp: 1234567890
-}
-```
-
-### Using Protected Routes
-
-Include the cookie in your requests:
+### Example: Login
 
 ```bash
-curl -X GET http://localhost:3000/api/transactions \
-  -H "Cookie: accessToken=your-token-here"
+curl -X POST http://localhost:8000/api/users/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"test@example.com","password":"password123"}' \
+  -c cookies.txt
 ```
 
-Or use the frontend which handles cookies automatically.
+The `-c cookies.txt` flag saves the cookie for subsequent requests.
 
 ---
 
 ## Data Models
 
-### User Model
+### User
 
 ```js
 {
-    name: String,
-    email: { type: String, unique: true },
-    password: String,
-    avatar: String,
-    role: { type: String, enum: ['user', 'admin'], default: 'user' },
-    createdAt: Date,
-    updatedAt: Date
+  name: String,          // required
+  email: String,         // required, unique, lowercase, indexed
+  password: String,      // required, hashed before save
+  createdAt: Date,       // auto
+  updatedAt: Date        // auto
 }
 ```
 
-### Transaction Model
+### Transaction
 
 ```js
 {
-    user: { type: ObjectId, ref: 'User' },
-    type: { type: String, enum: ['debit', 'credit'] },
-    amount: Number,
+  userId: ObjectId,      // ref: User, required, indexed
+  amount: Number,        // required
+  type: String,          // "Income" | "Expense", required, indexed
+  category: String,      // required, indexed
+  date: Date,            // required, indexed, defaults to now
+  desc: String,          // optional description
+  createdAt: Date,       // auto
+  updatedAt: Date        // auto
+}
+```
+
+Compound indexes on `(userId, date)`, `(userId, category)`, and `(userId, type)` keep common queries fast.
+
+### Budget
+
+```js
+{
+  userId: ObjectId,      // ref: User, required
+  year: Number,          // required
+  month: Number,         // required (1-12)
+  monthlyBudget: Number, // required, default: 0
+  savingsTarget: Number, // default: 0
+  categoryLimits: [{     // per-category spending caps
     category: String,
-    description: String,
-    date: Date,
-    createdAt: Date,
-    updatedAt: Date
+    limit: Number
+  }],
+  createdAt: Date,       // auto
+  updatedAt: Date        // auto
 }
 ```
 
-### Budget Model
-
-```js
-{
-    user: { type: ObjectId, ref: 'User' },
-    category: String,
-    limit: Number,
-    spent: { type: Number, default: 0 },
-    month: Number,
-    year: Number,
-    createdAt: Date,
-    updatedAt: Date
-}
-```
+A unique compound index on `(userId, year, month)` ensures one budget per user per month. Setting a budget for the same month again updates it in place.
 
 ---
 
-## Middlewares
+## Validation & Error Handling
 
-### `authMiddleware.js`
+Every incoming request body is validated against a Joi schema before it reaches the controller. If validation fails, you get a 400 with a clear message about what went wrong.
 
-Protects routes by verifying JWT tokens.
+Errors flow through a global error handler that:
 
-```js
-import { protect } from './middlewares/authMiddleware.js';
+- In **development**: returns the full error object and stack trace.
+- In **production**: returns only a clean message — no internals leaked.
 
-app.get('/protected-route', protect, (req, res) => {
-    // req.user is available here
-});
-```
-
-### `validateMiddleware.js`
-
-Wraps Joi validation for request bodies.
-
-```js
-import { validate } from './middlewares/validateMiddleware.js';
-import { registerSchema } from './utils/AuthValidation.js';
-
-app.post('/register', validate(registerSchema), userController.register);
-```
-
-### `errorMiddleware.js`
-
-Global error handler that catches all errors.
-
-```js
-// Automatically applied in app.js
-app.use(globalErrorHandler);
-```
-
-### `noCache.js`
-
-Disables caching for sensitive routes to prevent 304 Not Modified responses.
-
-```js
-import { noCache } from './middlewares/noCache.js';
-
-app.get('/users/profile', protect, noCache, userController.getProfile);
-```
-
-**Headers set by noCache:**
-- `Cache-Control: no-cache, no-store, must-revalidate, private`
-- `Expires: 0`
-- `Pragma: no-cache`
-- `Surrogate-Control: no-store`
-
----
-
-## Error Handling
-
-### Custom Error Class
-
-All errors use the `AppError` class:
-
-```js
-import AppError from './utils/AppError.js';
-
-throw new AppError('Resource not found', 404);
-```
-
-### Error Response Format
-
-```json
-{
-    "status": "error",
-    "statusCode": 404,
-    "message": "Resource not found"
-}
-```
-
-### Error Types
-
-| Status Code | Error Type | Description |
-|-------------|------------|-------------|
-| 400 | Bad Request | Invalid input |
-| 401 | Unauthorized | Missing/invalid token |
-| 403 | Forbidden | Insufficient permissions |
-| 404 | Not Found | Resource doesn't exist |
-| 500 | Internal Server Error | Server error |
+Unknown route paths get caught by a 404 handler at the bottom of the middleware stack.
 
 ---
 
 ## Environment Variables
 
-### Development (.env)
-
-```env
-PORT=8000
-MONGODB_URI=mongodb://localhost:27017
-JWT_SECRET=dev-secret-key-change-in-production
-JWT_EXPIRES_IN=1d
-JWT_REFRESH_SECRET=dev-refresh-secret-key-change-in-production
-JWT_REFRESH_EXPIRES_IN=7d
-FRONTEND_URL=http://localhost:5173
-NODE_ENV=development
-```
-
-### Production (.env.production)
-
-```env
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/finsmart
-JWT_SECRET=super-secure-random-string-min-32-chars
-JWT_EXPIRES_IN=15m
-JWT_REFRESH_SECRET=super-secure-refresh-random-string-min-32-chars
-JWT_REFRESH_EXPIRES_IN=7d
-FRONTEND_URL=https://finsmart.vercel.app
-NODE_ENV=production
-```
+| Variable | Required | Description |
+|----------|----------|-------------|
+| `PORT` | No | Port to listen on. Defaults to `8000`. |
+| `MONGODB_URI` | **Yes** | MongoDB connection string (without database name — the app appends `/finsmart`). |
+| `JWT_SECRET` | **Yes** | Secret key for signing JWTs. Make it long and random. |
+| `JWT_EXPIRY` | No | Token expiry duration. Defaults to `7d`. |
+| `NODE_ENV` | No | `development` or `production`. Controls error verbosity. |
 
 ---
 
-## Testing
+## Design Decisions Worth Noting
 
-### Manual Testing with Postman
+**Cookie-based auth over localStorage** — HTTP-only cookies are immune to XSS token theft. The tradeoff is CSRF, but since this is paired with a same-origin frontend (via CORS `credentials: true` and `sameSite: strict`), the risk is mitigated.
 
-Import the Postman collection:
+**Services and repositories** — Not every controller needs them. Simple CRUD (like user profile) lives directly in the controller. But transaction filtering uses a `buildTransactionMatch()` service to construct query filters, and a repository to run `$facet` aggregations for dynamic dropdowns. This keeps the controller readable.
 
-```
-FinSmart_Auth_API.postman_collection.json
-```
+**Upsert for budgets** — Instead of separate "create" and "update" endpoints, `setBudget` uses `findOneAndUpdate` with `upsert: true`. One endpoint, one less thing to think about.
 
-### API Testing Checklist
+**Dynamic filters** — The `/transactions/filters` endpoint doesn't return hardcoded options. It runs an aggregation on your actual data, so if you only have transactions from 2025 and 2026, the dropdown only shows those years. No stale options.
 
-- [ ] User registration
-- [ ] User login
-- [ ] Protected route access
-- [ ] Token refresh
-- [ ] Transaction CRUD
-- [ ] Budget CRUD
-- [ ] Invalid token handling
-- [ ] Input validation errors
+**Indexed queries** — Compound indexes on the most common query patterns (`userId + date`, `userId + category`, `userId + type`) keep the API responsive even as transaction counts grow.
 
 ---
 
-## Deployment
-
-### Deploy to Vercel
-
-1. Install Vercel CLI:
+## Available Scripts
 
 ```bash
-npm i -g vercel
+npm run dev     # Development with auto-restart (nodemon)
+npm run start   # Production mode (plain node)
 ```
-
-2. Deploy:
-
-```bash
-vercel
-```
-
-3. Set environment variables in Vercel dashboard
-
-### Deploy to Render
-
-1. Connect GitHub repository
-2. Set build command: `npm install`
-3. Set start command: `npm run start`
-4. Add environment variables
-
-### Deploy to Railway
-
-1. Create new project from GitHub
-2. Add MongoDB service
-3. Configure environment variables
-4. Deploy automatically on push
-
-### Deployment Checklist
-
-- [ ] Set strong JWT secrets
-- [ ] Configure production MongoDB
-- [ ] Update CORS origin
-- [ ] Enable HTTPS
-- [ ] Set up logging
-- [ ] Configure rate limiting (optional)
-- [ ] Add monitoring (optional)
-
----
-
-## Security
-
-### Best Practices Implemented
-
-- **Password Hashing** - bcryptjs with salt rounds
-- **JWT Tokens** - Short-lived access tokens
-- **HTTP-only Cookies** - Prevents XSS token theft
-- **Input Validation** - Joi schemas for all inputs
-- **CORS Restrictions** - Limited to frontend origin
-- **Error Messages** - Generic messages (no stack traces)
-- **No-Cache Headers** - Prevents cached responses on sensitive data
-
-### Recommended Additions
-
-- Rate limiting (express-rate-limit)
-- Request sanitization (express-validator)
-- Helmet.js for security headers
-- API key for admin routes
-- MongoDB index optimization
-
----
-
-## Database
-
-### MongoDB Connection
-
-Connection is handled in `src/config/db.js`:
-
-```js
-const connectDB = async () => {
-    const connectionInstance = await mongoose.connect(`${env.MONGODB_URI}/finsmart`);
-    console.log(`MongoDB connected: ${connectionInstance.connection.host}`);
-};
-```
-
-### Using MongoDB Atlas
-
-1. Create free cluster at [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)
-2. Get connection string
-3. Update `MONGODB_URI` in `.env`:
-
-```env
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net
-```
-
-### Local MongoDB
-
-```env
-MONGODB_URI=mongodb://localhost:27017
-```
-
----
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-### Code Style Guidelines
-
-- Use ES Modules syntax (`import`/`export`)
-- Follow Express.js conventions
-- Use async/await for async operations
-- Handle errors with try/catch
-- Use meaningful variable names
-- Add comments for complex logic
-
----
-
-## Known Issues
-
-1. **Token Expiry** - Very short expiry may require frequent refresh
-2. **CORS** - Strict origin may block legitimate requests in some setups
-3. **Error Messages** - Could be more descriptive for client-side handling
-
----
-
-## Future Enhancements
-
-- [ ] Rate limiting for API endpoints
-- [ ] Email verification on registration
-- [ ] Password reset via email
-- [ ] Two-factor authentication (2FA)
-- [ ] Transaction export (CSV/PDF)
-- [ ] Budget alerts and notifications
-- [ ] Analytics endpoints
-- [ ] Admin dashboard API
-- [ ] API documentation with Swagger/OpenAPI
-- [ ] Unit and integration tests
-
----
-
-## License
-
-This project is part of **AlmaBetter's AlmaX Program — Week 6 Assignment** and is intended for educational purposes.
-
-Feel free to use the code for learning, but please don't copy it directly for your portfolio without understanding it first.
 
 ---
 
 ## Author
 
 **Md Munna**
-📧 Email: [mdmunna19434@gmail.com](mailto:mdmunna19434@gmail.com)
-📱 Phone: +91 7050498963
-📍 Location: Bihar, India
-
----
-
-## Acknowledgments
-
-- **AlmaBetter** — For the learning opportunity and structured curriculum
-- **AlmaX Program** — For the Week 6 assignment that made this project possible
-- **Express.js Team** — For the amazing web framework
-- **MongoDB Team** — For the flexible NoSQL database
-- **Mongoose Contributors** — For the elegant ODM
-
----
-
-## API Quick Reference
-
-### Register User
-
-```bash
-POST /api/users/register
-Content-Type: application/json
-
-{
-    "name": "John Doe",
-    "email": "john@example.com",
-    "password": "securepassword123"
-}
-```
-
-### Login User
-
-```bash
-POST /api/users/login
-Content-Type: application/json
-
-{
-    "email": "john@example.com",
-    "password": "securepassword123"
-}
-```
-
-### Create Transaction
-
-```bash
-POST /api/transactions
-Cookie: accessToken=your-token
-
-{
-    "type": "debit",
-    "amount": 500,
-    "category": "Food",
-    "description": "Grocery shopping",
-    "date": "2026-04-02"
-}
-```
-
-### Get All Transactions
-
-```bash
-GET /api/transactions
-Cookie: accessToken=your-token
-```
-
-### Create Budget
-
-```bash
-POST /api/budgets
-Cookie: accessToken=your-token
-
-{
-    "category": "Food",
-    "limit": 5000,
-    "month": 4,
-    "year": 2026
-}
-```
+📧 mdmunna19434@gmail.com
+📍 Bihar, India
 
 ---
 
 <div align="center">
-
-**Built with ❤️ for AlmaBetter — AlmaX Week 6 Assignment**
-
-Made in Bihar, India
-
+Part of AlmaBetter's AlmaX Program
 </div>
