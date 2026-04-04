@@ -51,7 +51,7 @@ export default function Login() {
             label="Password"
             type="password"
             leftIcon={FiLock}
-            placeholder="••••••••"
+            placeholder="abcde@1947"
             error={errors.password?.message}
             {...register('password')}
           />
