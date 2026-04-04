@@ -1,37 +1,47 @@
-/** @format */
-
-import { cn } from "@/utils/cn";
-import { useState } from "react";
-import { FiShield } from "react-icons/fi";
-import { toast } from "react-toastify";
+import { useForm } from 'react-hook-form';
+import { joiResolver } from '@hookform/resolvers/joi';
+import { useDispatch, useSelector } from 'react-redux';
+import { toast } from 'react-toastify';
+import { FiShield, FiLock, FiArrowRight } from 'react-icons/fi';
+import Input from '@/components/common/Input';
+import Button from '@/components/common/Button';
+import { securitySchema } from '@/utils/SecurityValidation';
+import { changePassword, resetSecurityStatus } from '@/store/slices/securitySlice';
 
 export default function Security() {
-  const [passwords, setPasswords] = useState({
-    currentPassword: "",
-    newPassword: "",
-    confirmPassword: "",
+  const dispatch = useDispatch();
+  const { isLoading } = useSelector((state) => state.security);
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isValid }
+  } = useForm({
+    mode: 'onChange',
+    resolver: joiResolver(securitySchema),
+    defaultValues: {
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    }
   });
 
-  const handleChange = (e) => {
-    setPasswords({ ...passwords, [e.target.name]: e.target.value });
-  };
+  const onSubmit = async (data) => {
+    const result = await dispatch(changePassword({
+      currentPassword: data.currentPassword,
+      newPassword: data.newPassword,
+      confirmPassword: data.confirmPassword,
+    }));
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (passwords.newPassword !== passwords.confirmPassword) {
-      toast.error("Hold up! Your new passwords do not match.");
-      return;
+    if (changePassword.fulfilled.match(result)) {
+      toast.success('Password changed successfully!');
+      reset();
+      dispatch(resetSecurityStatus());
+    } else {
+      toast.error(result.payload?.message || 'Failed to change password.');
     }
-    console.log("Password Update Payload:", passwords);
-    toast.success("Success! Your password has been securely updated.");
-    setPasswords({ currentPassword: "", newPassword: "", confirmPassword: "" });
   };
-
-  const inputStyles = cn(
-    "mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm",
-    "text-slate-900 transition-all duration-200 placeholder:text-slate-400",
-    "focus:border-emerald-500 focus:bg-white focus:outline-none focus:ring-4 focus:ring-emerald-500/10",
-  );
 
   return (
     <div className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:p-8">
@@ -41,80 +51,48 @@ export default function Security() {
         </div>
         <div>
           <h2 className="text-xl font-bold text-slate-900">Security</h2>
-          <p className="text-sm text-slate-500">
-            Update your account password.
-          </p>
+          <p className="text-sm text-slate-500">Update your account password.</p>
         </div>
       </div>
 
-      {/* Form */}
-      <form onSubmit={handleSubmit} className="max-w-md space-y-5">
-        <div>
-          <label
-            htmlFor="currentPassword"
-            className="block text-sm font-semibold text-slate-700"
-          >
-            Current Password
-          </label>
-          <input
-            type="password"
-            id="currentPassword"
-            name="currentPassword"
-            value={passwords.currentPassword}
-            onChange={handleChange}
-            placeholder="Enter current password"
-            required
-            className={inputStyles}
-          />
-        </div>
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+        <Input
+          label="Current Password"
+          type="password"
+          leftIcon={FiLock}
+          placeholder="Enter current password"
+          error={errors.currentPassword?.message}
+          {...register('currentPassword')}
+        />
 
-        <div>
-          <label
-            htmlFor="newPassword"
-            className="block text-sm font-semibold text-slate-700"
-          >
-            New Password
-          </label>
-          <input
-            type="password"
-            id="newPassword"
-            name="newPassword"
-            value={passwords.newPassword}
-            onChange={handleChange}
-            placeholder="Enter new password"
-            required
-            className={inputStyles}
-          />
-        </div>
+        <Input
+          label="New Password"
+          type="password"
+          leftIcon={FiLock}
+          placeholder="abcde@1947"
+          error={errors.newPassword?.message}
+          {...register('newPassword')}
+        />
 
-        <div>
-          <label
-            htmlFor="confirmPassword"
-            className="block text-sm font-semibold text-slate-700"
-          >
-            Confirm New Password
-          </label>
-          <input
-            type="password"
-            id="confirmPassword"
-            name="confirmPassword"
-            value={passwords.confirmPassword}
-            onChange={handleChange}
-            placeholder="Confirm new password"
-            required
-            className={inputStyles}
-          />
-        </div>
+        <Input
+          label="Confirm New Password"
+          type="password"
+          leftIcon={FiLock}
+          placeholder="abcde@1947"
+          error={errors.confirmPassword?.message}
+          {...register('confirmPassword')}
+        />
 
-        {/* Button */}
-        <div className="pt-4">
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-slate-800 hover:shadow-md focus:outline-none focus:ring-4 focus:ring-slate-900/20 sm:w-auto"
-          >
-            Update Password
-          </button>
-        </div>
+        <Button
+          type="submit"
+          variant="primary"
+          className="mt-4"
+          isLoading={isLoading}
+          disabled={!isValid}
+          rightIcon={FiArrowRight}
+        >
+          Update Password
+        </Button>
       </form>
     </div>
   );
