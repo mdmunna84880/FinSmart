@@ -10,7 +10,9 @@ import SummaryCard from './SummaryCard';
 import BudgetProgress from './BudgetProgress';
 import RecentTransactions from './RecentTransactions';
 import CashFlowChart from './CashFlowChart';
+import GeminiInsightCard from './GeminiInsightCard';
 
+/** Dashboard displaying financial overview with income, expenses, savings, and budget progress. */
 export default function Dashboard() {
   const dispatch = useDispatch();
   const { user } = useSelector((state) => state.auth);
@@ -58,18 +60,7 @@ export default function Dashboard() {
         <div className="space-y-8 lg:col-span-1">
           <BudgetProgress totalExpense={totalExpense} monthlyBudget={monthlyBudget} />
 
-          <div className="rounded-3xl bg-brand-900 p-6 text-white shadow-lg relative overflow-hidden">
-            <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-brand-500/30 blur-2xl" />
-            <div className="relative z-10">
-              <h3 className="text-lg font-bold">Try Smart Insights</h3>
-              <p className="mt-2 text-sm text-brand-100 mb-4">
-                Ask our AI to analyze your spending habits and find hidden savings.
-              </p>
-              <button className="rounded-xl bg-white px-4 py-2 text-sm font-bold text-brand-900 transition hover:bg-slate-100 w-full">
-                Ask Gemini
-              </button>
-            </div>
-          </div>
+          <GeminiInsightCard />
         </div>
 
       </div>

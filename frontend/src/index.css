@@ -5,8 +5,8 @@
 
   --color-brand-50: #ecfdf5;
   --color-brand-100: #d1fae5;
-  --color-brand-200: #a7f3d0; 
-  --color-brand-300: #6ee7b7; 
+  --color-brand-200: #a7f3d0;
+  --color-brand-300: #6ee7b7;
   --color-brand-400: #34d399;
   --color-brand-500: #10b981;
   --color-brand-600: #059669;
@@ -15,6 +15,47 @@
   --color-brand-900: #064e3b;
 
   --font-sans: 'Inter', system-ui, sans-serif;
+
+}
+
+@keyframes chat-slide-in {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@keyframes chat-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-in-from-left {
+  from { transform: translateX(-100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
+@utility animate-in {
+  animation-duration: 300ms;
+  animation-timing-function: ease-out;
+  animation-fill-mode: both;
+}
+
+@utility slide-in-from-right {
+  animation-name: chat-slide-in;
+}
+
+@utility fade-in {
+  animation-name: chat-fade-in;
+}
+
+@utility slide-in-from-left {
+  animation-name: slide-in-from-left;
+}
+
+@utility scrollbar-hide {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @layer base {
