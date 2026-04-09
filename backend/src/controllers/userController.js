@@ -5,7 +5,7 @@ import AppError from "../utils/AppError.js";
 const cookieOptions = {
     httpOnly: true,
     secure: env.NODE_ENV === "production",
-    sameSite: "strict"
+    sameSite: env.NODE_ENV === "production" ? "none" : "lax"
 };
 
 // Register route for user
