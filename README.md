@@ -83,64 +83,242 @@ Backend → `http://localhost:8000` &nbsp;|&nbsp; Frontend → `http://localhost
 
 ## Architecture
 
-```mermaid
-flowchart TB
-    subgraph Frontend ["🖥️ Frontend — React 19 + Vite"]
-        UI[Pages & Components]
-        Store[Redux Toolkit\n5 Slices]
-        Client[Axios\nwithCredentials: true]
-        UI <--> Store
-        Store --> Client
-    end
+FinSmart is organized into three tiers: a React frontend, an Express backend, and a MongoDB data layer — with Google Gemini integrated as an external AI service.
 
-    subgraph Backend ["⚙️ Backend — Express 5"]
-        Routes[Routes]
-        Controllers[Controllers]
-        Services[Services & Repositories]
-        Middleware[Middleware Stack\nCORS → JSON → Cookie → JWT → Joi]
-        Routes --> Controllers --> Services
-        Routes -.-> Middleware
-    end
-
-    subgraph Data ["💾 Data Layer"]
-        MongoDB[(MongoDB\nfinsmart)]
-        Gemini[Google Gemini 2.5 Flash\nAI Responses]
-    end
-
-    Client -->|"HTTP + HTTP-only Cookies"| Routes
-    Services -->|"Aggregation Pipelines"| MongoDB
-    Services -->|"System Prompt + Context"| Gemini
-    Gemini -->|"AI Response"| Services
+```
+┌──────────────────────────────────────────────────────────────────┐
+│  Frontend  —  React 19 + Vite + Redux Toolkit                   │
+│  http://localhost:5173                                           │
+│                                                                  │
+│  Pages        Components       Store          Utils              │
+│  ─────        ──────────       ─────          ─────              │
+│  Dashboard    Button           authSlice      api.js (Axios)     │
+│  Transactions Input           chatSlice      cn.js (clsx)        │
+│  Analytics    Modal            txnSlice       chartUtils.js       │
+│  Profile      Sidebar          budgetSlice    formatters          │
+│  ChatWidget   Navbar           securitySlice  Joi schemas        │
+│  Landing      Charts, Tables                    │                │
+│                                                                  │
+│              All requests go through → api.js (Axios)            │
+│              withCredentials: true → cookies sent automatically  │
+└──────────────────────────────┬───────────────────────────────────┘
+                               │
+                    POST / GET / PUT / DELETE
+                    Cookie: token=<JWT>
+                               │
+                               ▼
+┌──────────────────────────────────────────────────────────────────┐
+│  Backend  —  Express 5 + Mongoose 9                              │
+│  http://localhost:8000                                           │
+│                                                                  │
+│  Request Flow (top to bottom):                                   │
+│  ┌────────────────────────────────────────────────────────────┐ │
+│  │  1. CORS — origin: CLIENT_URL, credentials: true           │ │
+│  │  2. express.json() — parse request body                    │ │
+│  │  3. cookieParser() — read HTTP-only JWT cookie             │ │
+│  │  4. morgan — log request (dev mode)                        │ │
+│  │  5. verifyJWT* — decode token → req.user                   │ │
+│  │  6. validateRequest* — Joi schema check                    │ │
+│  └────────────────────────────────────────────────────────────┘ │
+│                                                                  │
+│  * = applied selectively per route                              │
+│                                                                  │
+│  Code Pattern:                                                   │
+│  routes/ → controllers/ → services/ or repositories/ → models/  │
+│                                                                  │
+│  Example — POST /chat/message:                                   │
+│  chatRoutes → chatController.sendMessage                         │
+│    → chatRepository.aggregateUserFinancialData(user)             │
+│    → chatService.generateGeminiResponse(msg, context, history)   │
+│    → save ChatSession → return { sessionId, reply }              │
+│                                                                  │
+│  Resources (4 modules):                                          │
+│  ┌──────────┬─────────────────┬────────────────────────────┐    │
+│  │ Module   │ Model           │ Key Endpoints              │    │
+│  ├──────────┼─────────────────┼────────────────────────────┤    │
+│  │ Users    │ User            │ /users/register            │    │
+│  │          │                 │ /users/login               │    │
+│  │          │                 │ /users/me                  │    │
+│  │          │                 │ /users/change-password      │    │
+│  ├──────────┼─────────────────┼────────────────────────────┤    │
+│  │ Trans.   │ Transaction     │ /transactions              │    │
+│  │          │                 │ /transactions/filters      │    │
+│  │          │                 │ /transactions/:id          │    │
+│  ├──────────┼─────────────────┼────────────────────────────┤    │
+│  │ Budgets  │ Budget          │ /budgets                   │    │
+│  │          │                 │ /budgets/summary           │    │
+│  ├──────────┼─────────────────┼────────────────────────────┤    │
+│  │ Chat     │ ChatSession     │ /chat/message              │    │
+│  │          │                 │ /chat/sessions             │    │
+│  │          │                 │ /chat/sessions/:id         │    │
+│  └──────────┴─────────────────┴────────────────────────────┘    │
+│                                                                  │
+│                  │                               │               │
+└──────────────────┼───────────────────────────────┼───────────────┘
+                   ▼                               ▼
+┌──────────────────────────┐      ┌──────────────────────────────┐
+│  MongoDB                 │      │  Google Gemini 2.5 Flash     │
+│  Database: finsmart      │      │                              │
+│                          │      │  Called by: chatService.js   │
+│  Collections:            │      │                              │
+│  ┌────────────────────┐  │      │  Input:                      │
+│  │ users              │  │      │  - System prompt + user name │
+│  │ transactions       │  │      │  - contextSnapshot (JSON)    │
+│  │ budgets            │  │      │  - Conversation history      │
+│  │ chatsessions       │  │      │  - User message              │
+│  └────────────────────┘  │      │                              │
+└──────────────────────────┘      │  Output:                     │
+                                  │  - AI response text          │
+                                  └──────────────────────────────┘
 ```
 
-### Data Flow
+---
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant Frontend
-    participant Backend
-    participant MongoDB
-    participant Gemini
+### How Data Flows
 
-    User->>Frontend: Enters credentials
-    Frontend->>Backend: POST /users/login
-    Backend->>MongoDB: Find user, verify password
-    MongoDB-->>Backend: User document
-    Backend->>Backend: Generate JWT
-    Backend-->>Frontend: Set HTTP-only cookie + user data
-    Frontend->>Frontend: Store in Redux, navigate to /dashboard
+#### Authentication Flow
 
-    User->>Frontend: Sends chat message
-    Frontend->>Backend: POST /chat/message (cookie auto-sent)
-    Backend->>MongoDB: Aggregate 12mo financial data
-    MongoDB-->>Backend: Context snapshot
-    Backend->>Gemini: System prompt + context + message
-    Gemini-->>Backend: AI response
-    Backend->>MongoDB: Save session + messages
-    Backend-->>Frontend: { sessionId, reply }
-    Frontend->>User: Render markdown response
 ```
+1. User submits login form (email + password)
+       │
+2. Frontend dispatches loginUser(email, password)
+       │
+3. POST /users/login  →  body: { email, password }
+       │
+4. Backend: find user → compare password (bcrypt)
+       │
+5. Backend: user.generateAccessToken() → sign JWT with { _id, email }
+       │
+6. Backend: res.cookie("token", jwt, { httpOnly, secure, sameSite })
+       │
+7. Frontend receives { user } in response → stores in Redux
+       │
+8. Browser stores cookie → sent with every subsequent request
+       │
+9. App mounts → dispatches getUserProfile() → GET /users/me
+       │         cookie auto-sent → backend decodes → returns user
+       │
+10. Redux sets user → protected routes unlocked
+```
+
+#### AI Chat Flow
+
+```
+1. User types message in ChatInputBar (or clicks quick prompt)
+       │
+2. Redux dispatches sendMessage({ message, sessionId })
+       │
+3. Optimistic UI: user message pushed to messages[] immediately
+       │
+4. POST /chat/message  →  body: { message, sessionId }
+       │
+5. Backend: if first message in session → aggregateUserFinancialData(user)
+       │    Fetches last 12 months of:
+       │    - transactions (total income, expense, net savings)
+       │    - monthly trends (income/expense grouped by YYYY-MM)
+       │    - top expense categories (sorted descending)
+       │    - active budgets (last 12 months)
+       │    - 20 most recent transactions
+       │
+6. Backend: stores result as contextSnapshot in ChatSession
+       │
+7. Backend: generateGeminiResponse(userMessage, contextSnapshot, history)
+       │    - Builds system prompt with user name + financial JSON
+       │    - Sets up Gemini chat with greeting + conversation history
+       │    - Sends user message → receives AI text response
+       │
+8. Backend: appends user message + AI reply to session.messages[]
+       │
+9. Frontend: receives { sessionId, title, reply }
+       │    - Pushes AI reply to messages[]
+       │    - If new session, prepends to sessions[] list
+       │    - ChatMessages auto-scrolls to bottom
+```
+
+#### Transaction Filter Flow
+
+```
+1. User changes a filter dropdown or types in search
+       │
+2. useTransactionFilters hook updates params (300ms debounce on search)
+       │
+3. Redux dispatches fetchTransactions(params)
+       │
+4. GET /transactions?page=1&limit=20&year=2026&category=Food
+       │
+5. Backend: buildTransactionMatch(userId, filters)
+       │    Constructs MongoDB query:
+       │    {
+       │      userId: ObjectId,
+       │      date: { $gte: 2026-01-01, $lt: 2027-01-01 },
+       │      category: "Food"
+       │    }
+       │
+6. Backend: find(query).skip().limit() + countDocuments(query) in parallel
+       │
+7. Frontend: receives { data, pagination } → renders table
+       │
+8. Simultaneously: fetchAvailableFilters() → GET /transactions/filters
+       │    MongoDB $facet aggregation → { years, months, categories, types }
+       │    Dropdowns updated to show only options that exist in data
+```
+
+---
+
+### Data Model Relationships
+
+```
+┌──────────────┐
+│    User      │  One user account
+│  ──────────  │
+│  _id         │
+│  name        │
+│  email (UQ)  │
+│  password    │◄── hashed with bcrypt (10 rounds)
+│  timestamps  │
+└──────┬───────┘
+       │
+       │  1 : N
+       ├──────────────────┬──────────────────┬──────────────────┐
+       ▼                  ▼                  ▼                  ▼
+┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
+│ Transaction  │  │   Budget     │  │ ChatSession  │  │                  │
+│  ──────────  │  │  ──────────  │  │  ──────────  │  │                  │
+│  userId (FK) │  │  userId (FK) │  │  userId (FK) │  │  messages[]      │
+│  amount      │  │  year        │  │  title       │  │  ──────────      │
+│  type        │  │  month       │  │  messages[]  │  │    role          │
+│  category    │  │  monthlyBgt  │  │  contextSnap │  │    content       │
+│  date        │  │  savingsTgt  │  │  timestamps  │  │    timestamps    │
+│  desc        │  │  catLimits[] │  └──────────────┘  │                  │
+│  timestamps  │  │  timestamps  │                     │  contextSnapshot │
+└──────────────┘  └──────────────┘                     │  ─────────────── │
+                                                       │  (JSON blob)     │
+                                                       │  12mo financial  │
+                                                       │  summary         │
+                                                       └──────────────────┘
+```
+
+| Relationship | Type | Detail |
+|-------------|------|--------|
+| User → Transaction | One-to-Many | `userId` references `User._id`, indexed |
+| User → Budget | One-to-Many | `userId` references `User._id`, unique on `(userId, year, month)` |
+| User → ChatSession | One-to-Many | `userId` references `User._id`, indexed on `(userId, updatedAt)` |
+| ChatSession → messages[] | Embedded | Subdocument array, no separate collection |
+| ChatSession → contextSnapshot | Embedded | Mixed-type field, null until first message |
+| Budget → categoryLimits[] | Embedded | Subdocument array of `{ category, limit }` |
+
+### Database Indexes
+
+| Collection | Index | Type | Purpose |
+|------------|-------|------|---------|
+| `users` | `email` | Unique, single-field | Prevents duplicate accounts, speeds login lookup |
+| `transactions` | `userId` | Single-field | Ownership scoping on every query |
+| `transactions` | `userId + date` | Compound | Date-range queries for a user |
+| `transactions` | `userId + category` | Compound | Category-wise aggregation |
+| `transactions` | `userId + type` | Compound | Income vs expense filtering |
+| `budgets` | `userId + year + month` | Unique compound | Enforces one budget per user per month |
+| `chatsessions` | `userId` | Single-field | Ownership scoping |
+| `chatsessions` | `userId + updatedAt` | Compound | List sessions sorted by recency |
 
 ---
 
