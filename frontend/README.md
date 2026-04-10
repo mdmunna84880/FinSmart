@@ -1,13 +1,14 @@
-# FinsSmart - Personal Finance Dashboard
+# FinSmart — Personal Finance Dashboard
 
 [![React](https://img.shields.io/badge/React-19.2.4-61dafb?logo=react&logoColor=black)](https://react.dev)
 [![Vite](https://img.shields.io/badge/Vite-8.0.1-646cff?logo=vite&logoColor=white)](https://vitejs.dev)
 [![TailwindCSS](https://img.shields.io/badge/TailwindCSS-4.2.2-38bdf8?logo=tailwindcss&logoColor=white)](https://tailwindcss.com)
+[![Redux Toolkit](https://img.shields.io/badge/Redux_Toolkit-2.8.2-764abc?logo=redux&logoColor=white)](https://redux-toolkit.js.org)
 [![React Router](https://img.shields.io/badge/React_Router-7.13.2-ca4245?logo=react&logoColor=white)](https://reactrouter.com)
 
-A modern, responsive personal finance dashboard built with React and Tailwind CSS. Track your income, expenses, and make smarter financial decisions with visual insights.
+A modern, full-stack personal finance management platform built with React, Redux Toolkit, and Tailwind CSS. Track income and expenses, set monthly budgets, visualize spending patterns, and get AI-powered financial insights — all backed by a secure cookie-based authentication system.
 
-> **📌 Project Context:** This project was built as part of **AlmaBetter's AlmaX Program — Week 5 Assignment**.
+> **📌 Project Context:** Built for learning as part of **AlmaBetter's AlmaX Program Assignment**.
 
 ---
 
@@ -20,12 +21,13 @@ A modern, responsive personal finance dashboard built with React and Tailwind CS
 - [Installation](#installation)
 - [Available Scripts](#available-scripts)
 - [Configuration](#configuration)
-- [Components Overview](#components-overview)
+- [Authentication](#authentication)
+- [State Management](#state-management)
 - [Pages Overview](#pages-overview)
+- [Components Overview](#components-overview)
+- [AI Chat Assistant](#ai-chat-assistant)
 - [Environment Variables](#environment-variables)
 - [Build & Deployment](#build--deployment)
-- [Contributing](#contributing)
-- [License](#license)
 - [Author](#author)
 
 ---
@@ -33,24 +35,23 @@ A modern, responsive personal finance dashboard built with React and Tailwind CS
 ## Features
 
 ### Core Functionality
-Built for **AlmaX Week 5 Assignment**, FinsSmart includes:
-
-- **Dashboard Overview** - Real-time summary of income, expenses, and net savings
-- **Transaction Management** - View, filter, and categorize financial transactions
-- **Visual Analytics** - Interactive charts powered by Recharts
-- **Budget Tracking** - Monitor spending against monthly category limits
-- **Cash Flow Analysis** - 6-month income vs expense trends
-- **Profile Management** - User details, linked accounts, and preferences
-- **Responsive Design** - Works seamlessly on desktop, tablet, and mobile
-- **Collapsible Sidebar** - Customizable navigation with collapse functionality
+- **Dashboard Overview** — Net savings, total income/expenses, 6-month cash flow chart, recent transactions, budget progress, and a quick-access AI insight card
+- **Transaction Management** — Full CRUD with search, pagination, and dynamic filters (year, month, category, type) fetched from the backend
+- **Visual Analytics** — Donut chart for category spending breakdown and budget-vs-actual progress per category
+- **Budget Tracking** — Set monthly spending limits and per-category caps, view actual spending compared to budget
+- **AI Financial Chat** — Gemini-powered assistant that analyzes 12 months of real financial data for contextual, personalized answers
+- **Profile & Security** — User profile, password change form with Joi validation, budget configuration modal
+- **Responsive Design** — Mobile-first layout with collapsible sidebar, hamburger menu, and overlay drawer
 
 ### UI/UX Features
-- Toast notifications for user feedback
-- Custom tooltips on charts
-- Transaction type badges (debit/credit)
-- Advanced filtering for transactions
-- Mobile-friendly navigation drawer
-- Clean, modern design with Tailwind CSS
+- **Toast notifications** on every CRUD operation (success/error)
+- **Optimistic UI** in chat — messages appear instantly before the server responds
+- **Debounced search** (300 ms) on transactions to reduce API calls
+- **Markdown-rendered AI responses** with custom-styled bold text, lists, and code blocks
+- **Smart pagination** with ellipsis for large page ranges
+- **Color-coded progress bars** — green (< 80 %), amber (80–100 %), red (> 100 %)
+- **Quick-question prompts** in chat for first-time users
+- **Loading states** — full-screen spinner during auth check, inline loaders for mutations
 
 ---
 
@@ -61,17 +62,23 @@ Built for **AlmaX Week 5 Assignment**, FinsSmart includes:
 | **Framework** | React | 19.2.4 |
 | **Build Tool** | Vite | 8.0.1 |
 | **Routing** | React Router | 7.13.2 |
+| **State Management** | Redux Toolkit + React Redux | 2.8.2 / 9.2.0 |
 | **Styling** | Tailwind CSS | 4.2.2 |
 | **Charts** | Recharts | 3.8.0 |
-| **Icons** | React Icons | 5.6.0 |
+| **Forms** | React Hook Form + @hookform/resolvers | 7.61.0 / 5.2.0 |
+| **Validation** | Joi | 17.13.3 |
+| **HTTP Client** | Axios | 1.10.0 |
+| **Markdown** | react-markdown | 10.1.0 |
 | **Notifications** | React Toastify | 11.0.5 |
 | **Select Dropdowns** | React Select | 5.10.2 |
+| **Icons** | React Icons (Feather) | 5.6.0 |
+| **Modal** | react-modal | 3.16.3 |
 | **Utilities** | clsx, tailwind-merge | Latest |
 
 ### Development Dependencies
-- ESLint (v9.39.4) - Code linting
-- @vitejs/plugin-react (v6.0.1) - React HMR
-- @recharts/devtools (v0.0.11) - Recharts debugging tools
+- ESLint v9.39.4 — Code linting
+- @vitejs/plugin-react v6.0.1 — React HMR
+- @tailwindcss/vite — Tailwind CSS v4 plugin for Vite
 
 ---
 
@@ -84,107 +91,136 @@ frontend/
 │   └── icons.svg                # SVG icon sprite
 │
 ├── src/
-│   ├── assets/                  # Static assets (images, fonts, etc.)
+│   ├── main.jsx                 # Entry point (Redux Provider + Router)
+│   ├── App.jsx                  # Route definitions + auth bootstrap
+│   ├── index.css                # Tailwind config, custom theme, animations
+│   │
+│   ├── store/
+│   │   ├── index.js             # Redux store configuration
+│   │   └── slices/
+│   │       ├── authSlice.js         # Auth state + login/register/logout/profile thunks
+│   │       ├── chatSlice.js         # Chat panel, sessions, messages, optimistic UI
+│   │       ├── transactionSlice.js  # Transaction CRUD + pagination + available filters
+│   │       ├── budgetSlice.js       # Budget summary + set budget
+│   │       └── securitySlice.js     # Password change form state
+│   │
+│   ├── utils/
+│   │   ├── api.js               # Axios instance (withCredentials: true)
+│   │   ├── cn.js                # clsx + tailwind-merge helper
+│   │   ├── chartUtils.js        # Cash flow & category spending computations
+│   │   ├── currencyFormater.js  # USD currency formatter
+│   │   ├── AuthValidation.js    # Joi schemas for login/register
+│   │   ├── TransactionValidation.js  # Joi schema for transactions
+│   │   ├── SecurityValidation.js     # Joi schema for password change
+│   │   └── TransactionSchema.js      # Empty file (unused)
 │   │
 │   ├── components/
-│   │   ├── common/              # Shared reusable components
-│   │   │   └── Logo.jsx         # Brand logo component
+│   │   ├── common/
+│   │   │   ├── Button.jsx       # Multi-variant button (primary/outline/danger/ghost)
+│   │   │   ├── Input.jsx        # Input with icons, validation, password toggle
+│   │   │   ├── Loading.jsx      # Full-screen centered spinner
+│   │   │   ├── Modal.jsx        # react-modal wrapper with backdrop blur
+│   │   │   ├── Logo.jsx         # Brand logo with collapse state support
+│   │   │   ├── ProtectedRoute.jsx   # Redirects to /login if not authenticated
+│   │   │   └── PublicRoute.jsx      # Redirects to /dashboard if authenticated
 │   │   │
-│   │   └── layout/              # Layout components
-│   │       ├── MainLayout.jsx   # Main app wrapper with sidebar
-│   │       ├── Navbar.jsx       # Top navigation bar
-│   │       ├── Sidebar.jsx      # Collapsible side navigation
-│   │       └── navItems.js      # Navigation link configuration
+│   │   └── layout/
+│   │       ├── MainLayout.jsx   # App shell: sidebar + navbar + outlet + chat widget
+│   │       ├── Navbar.jsx       # Top bar: notifications, avatar initials, logout
+│   │       ├── Sidebar.jsx      # Collapsible sidebar (64px ↔ 256px)
+│   │       └── navItems.js      # Nav link definitions (icon + label + path)
 │   │
-│   ├── data/
-│   │   └── mockData.js          # Mock data for development
-│   │
-│   ├── pages/                   # Route-level page components
-│   │   ├── analytics/           # Analytics & insights page
-│   │   ├── dashboard/           # Main dashboard page
-│   │   │   ├── index.jsx        # Dashboard main component
-│   │   │   ├── SummaryCard.jsx  # Metric card component
-│   │   │   ├── BudgetProgress.jsx
-│   │   │   ├── CashFlowChart.jsx
-│   │   │   ├── CustomToolTip.jsx
-│   │   │   └── RecentTransactions.jsx
-│   │   │
-│   │   ├── landing/             # Public landing page
-│   │   │   ├── index.jsx
-│   │   │   ├── Features.jsx
-│   │   │   ├── Footer.jsx
-│   │   │   ├── Hero.jsx
-│   │   │   ├── PublicNavbar.jsx
-│   │   │   └── Security.jsx
-│   │   │
-│   │   ├── profile/             # User profile page
-│   │   ├── transactions/        # Transactions list page
-│   │   │   ├── index.jsx
-│   │   │   ├── TransactionFilters.jsx
-│   │   │   ├── TransactionTable.jsx
-│   │   │   └── TypeBadge.jsx
-│   │   │
-│   │   └── not-found/           # 404 error page
-│   │
-│   ├── utils/                   # Utility functions
-│   │   ├── cn.js                # Tailwind class merger (clsx + twMerge)
-│   │   └── currencyFormater.js  # Currency formatting helper
-│   │
-│   ├── App.jsx                  # Root component with routes
-│   ├── App.css                  # Component-specific styles
-│   ├── index.css                # Global styles + Tailwind directives
-│   └── main.jsx                 # Application entry point
+│   └── pages/
+│       ├── auth/
+│       │   ├── Login.jsx        # Login form (RHF + Joi)
+│       │   └── Register.jsx     # Registration form (RHF + Joi)
+│       │
+│       ├── landing/
+│       │   ├── index.jsx        # Landing page composition
+│       │   ├── Hero.jsx         # Hero section with dynamic CTA
+│       │   ├── Features.jsx     # 3-column feature grid
+│       │   ├── Security.jsx     # "Bank-level security" section
+│       │   ├── Footer.jsx       # Page footer
+│       │   └── PublicNavbar.jsx # Landing page nav with auth-aware CTAs
+│       │
+│       ├── dashboard/
+│       │   ├── index.jsx        # Dashboard: cards + chart + recent transactions
+│       │   ├── SummaryCard.jsx  # Financial metric card (amount, icon, trend)
+│       │   ├── CashFlowChart.jsx    # 6-month income vs expenses bar chart
+│       │   ├── RecentTransactions.jsx # Last 5 transactions list
+│       │   ├── BudgetProgress.jsx   # Monthly budget progress bar with color coding
+│       │   ├── GeminiInsightCard.jsx # Dark CTA card → opens AI chat
+│       │   └── CustomToolTip.jsx    # Recharts tooltip with formatted currency
+│       │
+│       ├── transactions/
+│       │   ├── index.jsx            # Transactions page (orchestrates sub-components)
+│       │   ├── TransactionTable.jsx # Data table with action buttons
+│       │   ├── TransactionForm.jsx  # Add/Edit form (RHF + Joi)
+│       │   ├── TransactionFilters.jsx # Search + react-select dropdowns
+│       │   ├── TransactionModals.jsx  # Add/Edit/Delete modal orchestrator
+│       │   ├── Pagination.jsx       # Smart pagination with ellipsis
+│       │   ├── TypeBadge.jsx        # Income (green) / Expense (red) badge
+│       │   ├── useTransactionFilters.js # Custom hook: filter state + debounced search
+│       │   ├── FilterComponents.jsx # react-select custom components
+│       │   ├── filterConfig.js      # select style configuration
+│       │   └── FormComponents.jsx   # FormField + FormSelect wrappers
+│       │
+│       ├── analytics/
+│       │   ├── index.jsx                # Analytics page composition
+│       │   ├── CategorySpendingChart.jsx # Recharts donut chart with center display
+│       │   └── CategoryBudgetList.jsx   # Category budget progress bars
+│       │
+│       ├── profile/
+│       │   ├── index.jsx        # Profile page orchestrator
+│       │   ├── ProfileHeader.jsx    # Avatar, name, email, verified badge
+│       │   ├── FinancialInfo.jsx    # Masked PAN + bank details (placeholder)
+│       │   ├── BudgetConfig.jsx     # Displays current budget, triggers edit modal
+│       │   ├── BudgetForm.jsx       # Budget form with dynamic category limits
+│       │   └── Security.jsx         # Password change form (RHF + Joi)
+│       │
+│       ├── chat-widget/
+│       │   ├── index.jsx        # Floating action button (bottom-right, ping animation)
+│       │   ├── ChatPanel.jsx    # Full-height slide-in panel from right
+│       │   ├── ChatSidebar.jsx  # Chat history sidebar (sessions list)
+│       │   ├── ChatMessages.jsx # Auto-scrolling message list with markdown
+│       │   ├── ChatInputBar.jsx # Auto-resizing textarea + send button
+│       │   ├── QuickQuestions.jsx # 8 predefined prompt chips
+│       │   ├── ChatDataBadge.jsx  # "Powered by 12 months of financial data" badge
+│       │   └── constants.js     # QUICK_QUESTIONS array + labels
+│       │
+│       └── not-found/
+│           └── index.jsx        # 404 page with navigation buttons
 │
-├── .gitignore                   # Git ignore rules
-├── eslint.config.js             # ESLint configuration
-├── index.html                   # HTML entry point
-├── jsconfig.json                # JavaScript config (path aliases)
-├── package.json                 # Dependencies and scripts
-├── vite.config.js               # Vite build configuration
-└── README.md                    # This file
+├── .gitignore
+├── eslint.config.js
+├── index.html                   # HTML entry with favicon + mobile meta
+├── jsconfig.json                # Path alias: @ → ./src
+├── package.json
+├── vercel.json                  # SPA rewrites + asset caching
+├── vite.config.js
+└── README.md
 ```
 
 ---
 
 ## Prerequisites
 
-Before you begin, ensure you have the following installed:
-
-- **Node.js** (v18 or higher) - [Download](https://nodejs.org/)
-- **npm** (v9 or higher) or **yarn** (v1.22+)
-- **Git** (optional, for version control)
-
-Verify your installation:
-
-```bash
-node --version
-npm --version
-```
+- **Node.js** v18+
+- **npm** v9+ (comes with Node.js)
 
 ---
 
 ## Installation
 
-### 1. Clone the Repository
-
 ```bash
-git clone https://github.com/mdmunna84880/FinSmart
-cd frontend
-```
-
-### 2. Install Dependencies
-
-```bash
+# Install dependencies
 npm install
-```
 
-### 3. Start Development Server
-
-```bash
+# Start the development server
 npm run dev
 ```
 
-The application will open at `http://localhost:5173`
+The app opens at `http://localhost:5173`. It connects to the backend at `http://localhost:8000` by default (configurable via `VITE_API_URL`).
 
 ---
 
@@ -192,109 +228,171 @@ The application will open at `http://localhost:5173`
 
 | Command | Description |
 |---------|-------------|
-| `npm run dev` | Start development server with Hot Module Replacement (HMR) |
-| `npm run build` | Build for production (optimized bundle) |
+| `npm run dev` | Start dev server with HMR |
+| `npm run build` | Production build (optimized bundle) |
 | `npm run preview` | Preview production build locally |
-| `npm run lint` | Run ESLint to check code quality |
+| `npm run lint` | Run ESLint quality checks |
 
 ---
 
 ## Configuration
 
-### Vite Configuration (`vite.config.js`)
+### Vite (`vite.config.js`)
 
 ```js
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import tailwindcss from "@tailwindcss/vite";
-import { fileURLToPath } from 'url';
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
+      '@': '/src'   // Use @/ to import from src/
     }
   }
 })
 ```
 
-**Key Settings:**
-- **Path Alias**: `@` resolves to `src/` directory
-- **Plugins**: React (with HMR) and Tailwind CSS v4
-- **Build Target**: Modern browsers (ES modules)
+### Path Aliases (`jsconfig.json`)
 
-### ESLint Configuration
+```json
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
+}
+```
 
-The project uses ESLint v9 with the following plugins:
-- `eslint-plugin-react-hooks` - Enforces Rules of Hooks
-- `eslint-plugin-react-refresh` - Validates React Refresh usage
+### Tailwind Theme (`index.css`)
+
+Custom brand palette from `brand-50` (#ecfdf5) to `brand-900` (#064e3b) with `brand-500` (#10b981) as primary. Font: **Inter** (Google Fonts). Custom animations: `chat-slide-in`, `chat-fade-in`, `slide-in-from-left`.
 
 ---
 
-## Components Overview
+## Authentication
 
-### Layout Components
+The frontend uses **cookie-based sessions** — no JWT is stored in localStorage. The backend sets HTTP-only cookies on login/register, and Axios sends them automatically via `withCredentials: true`.
 
-| Component | Path | Description |
-|-----------|------|-------------|
-| `MainLayout` | `components/layout/` | Wrapper with sidebar + navbar + content area |
-| `Sidebar` | `components/layout/` | Collapsible navigation sidebar |
-| `Navbar` | `components/layout/` | Top bar with notifications + user avatar |
+**Flow:**
+1. On mount, `App.jsx` dispatches `getUserProfile()` (`GET /users/me`) to check for an active session.
+2. `isCheckingAuth` is `true` until the call resolves — a full-screen loader is shown.
+3. If the call succeeds → `user` is set, protected routes become accessible.
+4. If it fails → `user` stays `null`, unauthenticated users are redirected from protected routes to `/login`.
 
-### Common Components
+**Route Guards:**
+- **`ProtectedRoute`** — Shows loader while checking auth. If no `user`, redirects to `/login`.
+- **`PublicRoute`** — Shows loader while checking auth. If `user` exists, redirects to `/dashboard`.
 
-| Component | Path | Description |
-|-----------|------|-------------|
-| `Logo` | `components/common/` | Brand logo with collapse state support |
+**Logout:** Navbar dispatches `logoutUser()`, shows a success toast, navigates to `/login`.
 
-### Dashboard Components
+---
 
-| Component | Path | Description |
-|-----------|------|-------------|
-| `SummaryCard` | `pages/dashboard/` | Metric display card with trend indicator |
-| `BudgetProgress` | `pages/dashboard/` | Budget vs spending progress bar |
-| `CashFlowChart` | `pages/dashboard/` | 6-month income/expense chart |
-| `RecentTransactions` | `pages/dashboard/` | Latest transactions list |
-| `CustomToolTip` | `pages/dashboard/` | Custom tooltip for Recharts |
+## State Management
 
-### Transaction Components
+Five Redux Toolkit slices manage all state:
 
-| Component | Path | Description |
-|-----------|------|-------------|
-| `TransactionTable` | `pages/transactions/` | Sortable, filterable transaction table |
-| `TransactionFilters` | `pages/transactions/` | Filter controls (date, category, type) |
-| `TypeBadge` | `pages/transactions/` | Visual badge for debit/credit type |
+| Slice | Key State | Async Thunks |
+|-------|-----------|-------------|
+| **auth** | `user`, `isLoading`, `isCheckingAuth` | `registerUser`, `loginUser`, `logoutUser`, `getUserProfile` |
+| **chat** | `isPanelOpen`, `sessions`, `activeSessionId`, `messages[]`, `isLoading` | `sendMessage` (optimistic UI), `fetchSessions`, `fetchSessionDetails`, `deleteSession` |
+| **transactions** | `transactions[]`, `pagination`, `availableFilters{}` | `fetchTransactions`, `fetchAvailableFilters`, `addTransaction`, `updateTransaction`, `deleteTransaction` |
+| **budget** | `summary`, `isLoading`, `isMutating` | `fetchBudgetSummary`, `setBudget` |
+| **security** | `isLoading` | `changePassword` |
+
+### Optimistic Chat
+
+The `sendMessage` thunk pushes the user's message to the `messages` array **immediately** before the API call completes. On fulfillment, the AI response is appended. If a new `sessionId` is returned, a new session entry is prepended to the sessions list.
 
 ---
 
 ## Pages Overview
 
-| Page | Route | Component | Description |
-|------|-------|-----------|-------------|
-| Landing | `/` | `Landing` | Public homepage with features |
-| Dashboard | `/dashboard` | `Dashboard` | Financial overview and metrics |
-| Transactions | `/transactions` | `Transactions` | Full transaction history |
-| Analytics | `/analytics` | `Analytics` | Charts and insights |
-| Profile | `/profile` | `Profile` | User settings and account info |
-| 404 | `*` | `NotFound` | Error page for undefined routes |
+| Page | Route | Guard | Description |
+|------|-------|-------|-------------|
+| Landing | `/` | Public | Hero, features, security section |
+| Login | `/login` | PublicRoute | Email + password form |
+| Register | `/register` | PublicRoute | Name, email, password + confirm |
+| Dashboard | `/dashboard` | ProtectedRoute | Financial overview, charts, budget progress |
+| Transactions | `/transactions` | ProtectedRoute | Full CRUD table with filters + pagination |
+| Analytics | `/analytics` | ProtectedRoute | Category spending donut + budget breakdown |
+| Profile | `/profile` | ProtectedRoute | User info, budget config, password change |
+| 404 | `*` | None | Not found page |
+
+All protected routes are wrapped in `MainLayout` (sidebar + navbar + chat widget).
+
+---
+
+## Components Overview
+
+### Layout
+
+| Component | Description |
+|-----------|-------------|
+| `MainLayout` | Full-screen flex shell: sidebar, navbar, `<Outlet />`, `ChatWidget` |
+| `Sidebar` | Collapsible nav (64 px ↔ 256 px), hidden on mobile |
+| `Navbar` | Notification bell, user avatar initials, logout, mobile hamburger |
+
+### Common
+
+| Component | Description |
+|-----------|-------------|
+| `Button` | 6 variants (primary/secondary/outline/danger/ghost/ghostDanger), 3 sizes, `isLoading` spinner |
+| `Input` | Auto-generated ID, left/right icons, error state, built-in password show/hide toggle |
+| `Modal` | react-modal wrapper, backdrop blur, 90 vh max-height |
+| `Loading` | Full-screen centered brand-colored spinner |
+| `Logo` | Links to `/`, supports `isCollapsed` for sidebar |
+| `ProtectedRoute` / `PublicRoute` | Auth guards with loading state |
+
+---
+
+## AI Chat Assistant
+
+The chat feature is a **first-class citizen** in the UI — a floating action button (bottom-right) opens a slide-in panel.
+
+### Components
+
+| Component | Role |
+|-----------|------|
+| `ChatWidget` (index.jsx) | Floating button with ping animation, toggles panel open/closed |
+| `ChatPanel` | Full-height panel: header, history toggle, data badge, messages, input bar |
+| `ChatSidebar` | Session list with "New Chat" button, delete per session, active highlight |
+| `ChatMessages` | Auto-scrolling list — user messages (right-aligned, green bg), AI messages (left, white bg, **markdown**) |
+| `ChatInputBar` | Auto-resizing textarea (max 120 px), Enter to send, Shift+Enter for newline |
+| `QuickQuestions` | 8 predefined prompt chips shown when the conversation is empty |
+| `ChatDataBadge` | Info badge: "Powered by your last 12 months of financial data" |
+
+### How It Works
+
+1. User types a message (or clicks a quick question).
+2. Redux thunk pushes the message to state immediately (optimistic UI).
+3. Backend captures a 12-month financial snapshot on the first message of a session.
+4. Gemini 2.5 Flash generates a response grounded in the user's real data.
+5. AI reply is appended and rendered as markdown.
+6. Session title is auto-generated from the first message.
+
+### Dashboard Integration
+
+The `GeminiInsightCard` on the dashboard dispatches `setChatPanelOpen(true)`, opening the chat panel directly from the dashboard.
 
 ---
 
 ## Environment Variables
 
-Currently, the application uses mock data from `src/data/mockData.js`. For production use, create a `.env` file:
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VITE_API_URL` | `http://localhost:8000/api` | Backend API base URL |
+
+Create a `.env` file in the `frontend/` root:
 
 ```env
-VITE_API_BASE_URL=https://api.finsmart.com
-VITE_APP_TITLE=FinsSmart
+VITE_API_URL=http://localhost:8000/api
 ```
 
-Access environment variables in code:
-
-```js
-const apiUrl = import.meta.env.VITE_API_BASE_URL;
-```
+Access in code via `import.meta.env.VITE_API_URL`.
 
 ---
 
@@ -306,131 +404,61 @@ const apiUrl = import.meta.env.VITE_API_BASE_URL;
 npm run build
 ```
 
-Output: `dist/` directory with optimized assets.
+Output lands in `dist/` with optimized, hashed assets.
 
-### Preview Production Build
+### Preview
 
 ```bash
 npm run preview
 ```
 
-### Deployment Checklist
+### Vercel Deployment
 
-- [ ] Update API endpoints in environment variables
-- [ ] Replace mock data with real API calls
-- [ ] Enable authentication flow
-- [ ] Configure proper error boundaries
-- [ ] Add analytics tracking (optional)
+The project includes a `vercel.json`:
 
-### Hosting Platforms
-
-FinsSmart can be deployed to any static hosting:
-
-- **Vercel** - Automatic deployments from Git
-- **Netlify** - Drag & drop or Git integration
-- **GitHub Pages** - Free hosting for public repos
-- **Cloudflare Pages** - Fast global CDN
-
----
-
-## Code Quality
-
-### ESLint Rules
-
-Run linting:
-
-```bash
-npm run lint
+```json
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "headers": [{ "source": "/assets/(.*)", "headers": [{ "key": "Cache-Control", "value": "public, max-age=31536000, immutable" }] }]
 ```
 
-The project enforces:
-- React Hooks rules
-- JSX best practices
-- No unused imports
-- Consistent code style
+Deploy:
+
+```bash
+npx vercel
+```
+
+### Other Platforms
+
+Works on any static host (Netlify, Cloudflare Pages, GitHub Pages) — just point it at the `dist/` folder. Ensure SPA routing is configured (all paths → `index.html`).
 
 ---
 
-## Browser Support
+## Design Decisions
 
-| Browser | Version |
-|---------|---------|
-| Chrome | Last 2 versions |
-| Firefox | Last 2 versions |
-| Safari | Last 2 versions |
-| Edge | Last 2 versions |
+**Cookie-based auth over localStorage** — HTTP-only cookies are immune to XSS token theft. Axios sends them automatically with `withCredentials: true`. No manual token management on the frontend.
 
----
+**Redux Toolkit for state** — Five focused slices keep concerns separated. The chat slice implements optimistic UI for instant message display, while transaction and budget slices handle loading/mutation states for inline loaders.
 
-## Contributing
+**React Hook Form + Joi** — Client-side validation mirrors the backend's Joi schemas, giving users instant feedback before a request is sent. Password fields get a built-in show/hide toggle.
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
+**Dynamic filters** — The transaction filter dropdowns aren't hardcoded. They fetch available options from `GET /transactions/filters`, so the UI only shows options that actually exist in the user's data.
 
-### Code Style Guidelines
-
-- Use functional components with hooks
-- Follow ESLint rules
-- Keep components small and focused
-- Use meaningful variable names
-- Add comments for complex logic
-
----
-
-## Known Issues
-
-1. **Mobile Safari Sidebar** - Drawer animation may lag on older iOS devices
-2. **Chart Responsiveness** - Very narrow screens (<320px) may have layout issues
-3. **Date Filtering** - Currently displays all transactions; date range filter pending
-
----
-
-## Future Enhancements
-
-- [ ] Backend API integration
-- [ ] User authentication (JWT/OAuth)
-- [ ] Export transactions to CSV/PDF
-- [ ] Dark mode theme
-- [ ] Recurring transaction automation
-- [ ] Savings goal tracking
-- [ ] Multi-currency support
-- [ ] Bank account integration (Plaid)
-
----
-
-## License
-
-This project is part of **AlmaBetter's AlmaX Program — Week 5 Assignment** and is intended for educational purposes.
-
-Feel free to use the code for learning, but please don't copy it directly for your portfolio without understanding it first.
+**react-markdown for AI responses** — Gemini responses may contain bold text, lists, and code. Custom-styled markdown components ensure they match the brand aesthetic (e.g., bold text in brand-green).
 
 ---
 
 ## Author
 
-**Md Munna**  
-📧 Email: [mdmunna19434@gmail.com](mailto:mdmunna19434@gmail.com)  
-📱 Phone: +91 7050498963  
-📍 Location: Bihar, India
-
----
-
-## Acknowledgments
-
-- **AlmaBetter** — For the learning opportunity and structured curriculum
-- **AlmaX Program** — For the Week 5 assignment that made this project possible
-- **React Team** — For the amazing framework
-- **Tailwind Labs** — For the incredible CSS framework
-- **Recharts Contributors** — For the beautiful chart library
+**Md Munna**
+📧 mdmunna19434@gmail.com
+📍 Bihar, India
 
 ---
 
 <div align="center">
 
-**Built with ❤️ for AlmaBetter — AlmaX Week 5 Assignment**
+**Built for learning — AlmaBetter's AlmaX Program Assignment**
 
 Made in Bihar, India
 
