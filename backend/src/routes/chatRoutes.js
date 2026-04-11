@@ -6,11 +6,17 @@ import {
     getSession,
     deleteSession
 } from "../controllers/chatController.js";
+import { noCache } from "../middlewares/noCache.js";
 
 const router = Router();
 
 /** Protect all chat routes with JWT authentication. */
-router.use(verifyJWT);
+router.use(verifyJWT, (req, res, next)=>{
+    if(req.method === "GET"){
+        return noCache(req, res, next);
+    }
+    next();
+});
 
 router.post("/message", sendMessage);
 router.get("/sessions", getSessions);

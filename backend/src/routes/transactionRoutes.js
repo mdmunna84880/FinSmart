@@ -10,11 +10,17 @@ import {
 import { validateRequest } from "../middlewares/validateMiddleware.js";
 import { verifyJWT } from "../middlewares/authMiddleware.js";
 import { addTransactionSchema, updateTransactionSchema } from "../utils/TransactionValidation.js";
+import { noCache } from "../middlewares/noCache.js";
 
 const router = Router();
 
-// Verify whether the user exists
-router.use(verifyJWT);
+// Verify whether the user exists and no caching for GET requests
+router.use(verifyJWT, (req, res, next)=>{
+    if(req.method === "GET"){
+        return noCache(req, res, next);
+    }
+    next();
+});
 
 // Dynamic filters for dropdowns
 router.get("/filters", getAvailableFilters);
