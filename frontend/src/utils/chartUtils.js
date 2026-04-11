@@ -17,7 +17,6 @@ export function computeCashFlow(transactions = []) {
 
   return Object.values(map)
     .sort((a, b) => a.sortKey - b.sortKey)
-    .slice(-6)
     .map(({ month, income, expenses }) => ({ month, income, expenses }));
 }
 

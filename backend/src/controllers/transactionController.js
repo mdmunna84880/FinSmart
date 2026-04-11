@@ -25,16 +25,25 @@ export const getTransactions = async (req, res, next) => {
     // Build query filters using the search service
     const matchFilters = buildTransactionMatch(req.user._id, req.query);
 
+    // When a `months` window is requested, return ALL matching records (no pagination)
+    const isMonthsQuery = req.query.months != null;
+
     // Retrieve transactions and total count in parallel
     const [transactions, totalTransactions] = await Promise.all([
-        Transaction.find(matchFilters).sort({ date: -1 }).skip((page - 1) * limit).limit(limit),
+        isMonthsQuery
+            ? Transaction.find(matchFilters).sort({ date: -1 })
+            : Transaction.find(matchFilters).sort({ date: -1 }).skip((page - 1) * limit).limit(limit),
         Transaction.countDocuments(matchFilters)
     ]);
+
+    const pagination = isMonthsQuery
+        ? { currentPage: 1, totalPages: 1, totalTransactions, limit: totalTransactions }
+        : { currentPage: page, totalPages: Math.ceil(totalTransactions / limit), totalTransactions, limit };
 
     return res.status(200).json({
         success: true,
         data: transactions,
-        pagination: { currentPage: page, totalPages: Math.ceil(totalTransactions / limit), totalTransactions, limit }
+        pagination
     });
 };
 

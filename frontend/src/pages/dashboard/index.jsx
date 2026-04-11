@@ -21,7 +21,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     dispatch(fetchBudgetSummary());
-    dispatch(fetchTransactions({ limit: 200 }));
+    dispatch(fetchTransactions({ months: 6 }));
   }, [dispatch]);
 
   const totalIncome = summary?.totalIncome ?? 0;

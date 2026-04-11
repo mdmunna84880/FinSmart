@@ -1,10 +1,17 @@
 // Generate a match object for MongoDB queries based on incoming filter parameters
 export const buildTransactionMatch = (userId, filters, exclude = []) => {
-  const { year, month, category, type, search } = filters;
+  const { year, month, months, category, type, search } = filters;
   const match = { userId };
 
-  // Apply specific year range filter if provided
-  if (year && !exclude.includes("year")) {
+  // Apply a rolling window of N months from today when `months` is provided
+  if (months && !exclude.includes("months")) {
+    const n = parseInt(months, 10);
+    const now = new Date();
+    const startDate = new Date(now.getFullYear(), now.getMonth() - n + 1, 1);
+    match.date = { $gte: startDate };
+  }
+  // Apply specific year range filter if provided (months takes precedence when both exist)
+  else if (year && !exclude.includes("year")) {
     const y = parseInt(year, 10);
     match.date = { $gte: new Date(y, 0, 1), $lt: new Date(y + 1, 0, 1) };
   }
