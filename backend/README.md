@@ -33,76 +33,19 @@ At its core, this backend gives the frontend everything it needs to run a person
 
 ### Architecture
 
-The code follows a lightweight layered pattern:
-
-```
-Routes → Controllers → Services/Repositories → Models
-```
-
-- **Routes** define endpoints and wire up validation + auth middleware.
-- **Controllers** handle request/response logic and business flow.
-- **Services** (`transactionQueryService.js`) build reusable query logic.
-- **Repositories** (`transactionsRepository.js`) handle raw data access and aggregation pipelines.
-- **Models** define schemas, indexes, and instance methods (password hashing, token generation).
-
-It's not over-engineered — controllers talk directly to models for simple CRUD, and delegate to services/repositories when queries get more involved.
+FinSmart backend follows a lightweight, decoupled layered pattern separating Routes, Controllers, Services, and Models for maximal readability. Controllers handle request logic and business flow, while dedicated Services map complex queries and interface with MongoDB.
 
 ---
 
 ## Project Structure
 
-```
-backend/
-├── src/
-│   ├── config/
-│   │   ├── db.js              # MongoDB connection
-│   │   └── env.js             # Centralized env config
-│   │
-│   ├── controllers/
-│   │   ├── userController.js      # Auth & profile logic
-│   │   ├── transactionController.js  # Transaction CRUD + filters
-│   │   ├── budgetController.js    # Budget settings & summaries
-│   │   └── chatController.js      # AI chat sessions & messages
-│   │
-│   ├── services/
-│   │   ├── transactionQueryService.js  # Builds MongoDB query filters
-│   │   └── chatService.js              # Gemini AI response generation
-│   │
-│   ├── repositories/
-│   │   ├── transactionsRepository.js   # Dynamic filter aggregations
-│   │   └── chatRepository.js           # Financial data aggregation for AI
-│   │
-│   ├── models/
-│   │   ├── User.js              # User schema + JWT methods
-│   │   ├── Transaction.js       # Income/expense records
-│   │   ├── Budget.js            # Monthly budget limits
-│   │   └── ChatSession.js       # AI conversation history + context
-│   │
-│   ├── routes/
-│   │   ├── userRoutes.js        # /api/users/*
-│   │   ├── transactionRoutes.js # /api/transactions/*
-│   │   ├── budgetRoutes.js      # /api/budgets/*
-│   │   └── chatRoutes.js        # /api/chat/*
-│   │
-│   ├── middlewares/
-│   │   ├── authMiddleware.js    # JWT verification from cookie
-│   │   ├── validateMiddleware.js # Joi validation wrapper
-│   │   ├── errorMiddleware.js   # Global error handler
-│   │   └── noCache.js           # Disables browser caching
-│   │
-│   ├── utils/
-│   │   ├── AppError.js          # Custom error class
-│   │   ├── AuthValidation.js    # Joi schemas for auth
-│   │   ├── BudgetValidation.js  # Joi schemas for budgets
-│   │   └── TransactionValidation.js # Joi schemas for transactions
-│   │
-│   ├── app.js                   # Express app setup
-│   └── index.js                 # Server entry point
-│
-├── .env                     # Environment variables (create your own)
-├── package.json
-└── README.md
-```
+The codebase is organized cleanly to separate concerns:
+
+- `src/controllers/` - Logic for processing requests
+- `src/models/` - Database schemas
+- `src/routes/` - API endpoint definitions
+- `src/middlewares/` - Authentication and validation logic
+- `src/utils/` - Utility functions
 
 ---
 

@@ -81,244 +81,13 @@ Backend → `http://localhost:8000` &nbsp;|&nbsp; Frontend → `http://localhost
 
 ---
 
-## Architecture
+## High-Level Architecture
 
-FinSmart is organized into three tiers: a React frontend, an Express backend, and a MongoDB data layer — with Google Gemini integrated as an external AI service.
-
-```
-┌──────────────────────────────────────────────────────────────────┐
-│  Frontend  —  React 19 + Vite + Redux Toolkit                   │
-│  http://localhost:5173                                           │
-│                                                                  │
-│  Pages        Components       Store          Utils              │
-│  ─────        ──────────       ─────          ─────              │
-│  Dashboard    Button           authSlice      api.js (Axios)     │
-│  Transactions Input           chatSlice      cn.js (clsx)        │
-│  Analytics    Modal            txnSlice       chartUtils.js       │
-│  Profile      Sidebar          budgetSlice    formatters          │
-│  ChatWidget   Navbar           securitySlice  Joi schemas        │
-│  Landing      Charts, Tables                    │                │
-│                                                                  │
-│              All requests go through → api.js (Axios)            │
-│              withCredentials: true → cookies sent automatically  │
-└──────────────────────────────┬───────────────────────────────────┘
-                               │
-                    POST / GET / PUT / DELETE
-                    Cookie: token=<JWT>
-                               │
-                               ▼
-┌──────────────────────────────────────────────────────────────────┐
-│  Backend  —  Express 5 + Mongoose 9                              │
-│  http://localhost:8000                                           │
-│                                                                  │
-│  Request Flow (top to bottom):                                   │
-│  ┌────────────────────────────────────────────────────────────┐ │
-│  │  1. CORS — origin: CLIENT_URL, credentials: true           │ │
-│  │  2. express.json() — parse request body                    │ │
-│  │  3. cookieParser() — read HTTP-only JWT cookie             │ │
-│  │  4. morgan — log request (dev mode)                        │ │
-│  │  5. verifyJWT* — decode token → req.user                   │ │
-│  │  6. validateRequest* — Joi schema check                    │ │
-│  └────────────────────────────────────────────────────────────┘ │
-│                                                                  │
-│  * = applied selectively per route                              │
-│                                                                  │
-│  Code Pattern:                                                   │
-│  routes/ → controllers/ → services/ or repositories/ → models/  │
-│                                                                  │
-│  Example — POST /chat/message:                                   │
-│  chatRoutes → chatController.sendMessage                         │
-│    → chatRepository.aggregateUserFinancialData(user)             │
-│    → chatService.generateGeminiResponse(msg, context, history)   │
-│    → save ChatSession → return { sessionId, reply }              │
-│                                                                  │
-│  Resources (4 modules):                                          │
-│  ┌──────────┬─────────────────┬────────────────────────────┐    │
-│  │ Module   │ Model           │ Key Endpoints              │    │
-│  ├──────────┼─────────────────┼────────────────────────────┤    │
-│  │ Users    │ User            │ /users/register            │    │
-│  │          │                 │ /users/login               │    │
-│  │          │                 │ /users/me                  │    │
-│  │          │                 │ /users/change-password      │    │
-│  ├──────────┼─────────────────┼────────────────────────────┤    │
-│  │ Trans.   │ Transaction     │ /transactions              │    │
-│  │          │                 │ /transactions/filters      │    │
-│  │          │                 │ /transactions/:id          │    │
-│  ├──────────┼─────────────────┼────────────────────────────┤    │
-│  │ Budgets  │ Budget          │ /budgets                   │    │
-│  │          │                 │ /budgets/summary           │    │
-│  ├──────────┼─────────────────┼────────────────────────────┤    │
-│  │ Chat     │ ChatSession     │ /chat/message              │    │
-│  │          │                 │ /chat/sessions             │    │
-│  │          │                 │ /chat/sessions/:id         │    │
-│  └──────────┴─────────────────┴────────────────────────────┘    │
-│                                                                  │
-│                  │                               │               │
-└──────────────────┼───────────────────────────────┼───────────────┘
-                   ▼                               ▼
-┌──────────────────────────┐      ┌──────────────────────────────┐
-│  MongoDB                 │      │  Google Gemini 2.5 Flash     │
-│  Database: finsmart      │      │                              │
-│                          │      │  Called by: chatService.js   │
-│  Collections:            │      │                              │
-│  ┌────────────────────┐  │      │  Input:                      │
-│  │ users              │  │      │  - System prompt + user name │
-│  │ transactions       │  │      │  - contextSnapshot (JSON)    │
-│  │ budgets            │  │      │  - Conversation history      │
-│  │ chatsessions       │  │      │  - User message              │
-│  └────────────────────┘  │      │                              │
-└──────────────────────────┘      │  Output:                     │
-                                  │  - AI response text          │
-                                  └──────────────────────────────┘
-```
-
----
-
-### How Data Flows
-
-#### Authentication Flow
-
-```
-1. User submits login form (email + password)
-       │
-2. Frontend dispatches loginUser(email, password)
-       │
-3. POST /users/login  →  body: { email, password }
-       │
-4. Backend: find user → compare password (bcrypt)
-       │
-5. Backend: user.generateAccessToken() → sign JWT with { _id, email }
-       │
-6. Backend: res.cookie("token", jwt, { httpOnly, secure, sameSite })
-       │
-7. Frontend receives { user } in response → stores in Redux
-       │
-8. Browser stores cookie → sent with every subsequent request
-       │
-9. App mounts → dispatches getUserProfile() → GET /users/me
-       │         cookie auto-sent → backend decodes → returns user
-       │
-10. Redux sets user → protected routes unlocked
-```
-
-#### AI Chat Flow
-
-```
-1. User types message in ChatInputBar (or clicks quick prompt)
-       │
-2. Redux dispatches sendMessage({ message, sessionId })
-       │
-3. Optimistic UI: user message pushed to messages[] immediately
-       │
-4. POST /chat/message  →  body: { message, sessionId }
-       │
-5. Backend: if first message in session → aggregateUserFinancialData(user)
-       │    Fetches last 12 months of:
-       │    - transactions (total income, expense, net savings)
-       │    - monthly trends (income/expense grouped by YYYY-MM)
-       │    - top expense categories (sorted descending)
-       │    - active budgets (last 12 months)
-       │    - 20 most recent transactions
-       │
-6. Backend: stores result as contextSnapshot in ChatSession
-       │
-7. Backend: generateGeminiResponse(userMessage, contextSnapshot, history)
-       │    - Builds system prompt with user name + financial JSON
-       │    - Sets up Gemini chat with greeting + conversation history
-       │    - Sends user message → receives AI text response
-       │
-8. Backend: appends user message + AI reply to session.messages[]
-       │
-9. Frontend: receives { sessionId, title, reply }
-       │    - Pushes AI reply to messages[]
-       │    - If new session, prepends to sessions[] list
-       │    - ChatMessages auto-scrolls to bottom
-```
-
-#### Transaction Filter Flow
-
-```
-1. User changes a filter dropdown or types in search
-       │
-2. useTransactionFilters hook updates params (300ms debounce on search)
-       │
-3. Redux dispatches fetchTransactions(params)
-       │
-4. GET /transactions?page=1&limit=20&year=2026&category=Food
-       │
-5. Backend: buildTransactionMatch(userId, filters)
-       │    Constructs MongoDB query:
-       │    {
-       │      userId: ObjectId,
-       │      date: { $gte: 2026-01-01, $lt: 2027-01-01 },
-       │      category: "Food"
-       │    }
-       │
-6. Backend: find(query).skip().limit() + countDocuments(query) in parallel
-       │
-7. Frontend: receives { data, pagination } → renders table
-       │
-8. Simultaneously: fetchAvailableFilters() → GET /transactions/filters
-       │    MongoDB $facet aggregation → { years, months, categories, types }
-       │    Dropdowns updated to show only options that exist in data
-```
-
----
-
-### Data Model Relationships
-
-```
-┌──────────────┐
-│    User      │  One user account
-│  ──────────  │
-│  _id         │
-│  name        │
-│  email (UQ)  │
-│  password    │◄── hashed with bcrypt (10 rounds)
-│  timestamps  │
-└──────┬───────┘
-       │
-       │  1 : N
-       ├──────────────────┬──────────────────┬──────────────────┐
-       ▼                  ▼                  ▼                  ▼
-┌──────────────┐  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐
-│ Transaction  │  │   Budget     │  │ ChatSession  │  │                  │
-│  ──────────  │  │  ──────────  │  │  ──────────  │  │                  │
-│  userId (FK) │  │  userId (FK) │  │  userId (FK) │  │  messages[]      │
-│  amount      │  │  year        │  │  title       │  │  ──────────      │
-│  type        │  │  month       │  │  messages[]  │  │    role          │
-│  category    │  │  monthlyBgt  │  │  contextSnap │  │    content       │
-│  date        │  │  savingsTgt  │  │  timestamps  │  │    timestamps    │
-│  desc        │  │  catLimits[] │  └──────────────┘  │                  │
-│  timestamps  │  │  timestamps  │                     │  contextSnapshot │
-└──────────────┘  └──────────────┘                     │  ─────────────── │
-                                                       │  (JSON blob)     │
-                                                       │  12mo financial  │
-                                                       │  summary         │
-                                                       └──────────────────┘
-```
-
-| Relationship | Type | Detail |
-|-------------|------|--------|
-| User → Transaction | One-to-Many | `userId` references `User._id`, indexed |
-| User → Budget | One-to-Many | `userId` references `User._id`, unique on `(userId, year, month)` |
-| User → ChatSession | One-to-Many | `userId` references `User._id`, indexed on `(userId, updatedAt)` |
-| ChatSession → messages[] | Embedded | Subdocument array, no separate collection |
-| ChatSession → contextSnapshot | Embedded | Mixed-type field, null until first message |
-| Budget → categoryLimits[] | Embedded | Subdocument array of `{ category, limit }` |
-
-### Database Indexes
-
-| Collection | Index | Type | Purpose |
-|------------|-------|------|---------|
-| `users` | `email` | Unique, single-field | Prevents duplicate accounts, speeds login lookup |
-| `transactions` | `userId` | Single-field | Ownership scoping on every query |
-| `transactions` | `userId + date` | Compound | Date-range queries for a user |
-| `transactions` | `userId + category` | Compound | Category-wise aggregation |
-| `transactions` | `userId + type` | Compound | Income vs expense filtering |
-| `budgets` | `userId + year + month` | Unique compound | Enforces one budget per user per month |
-| `chatsessions` | `userId` | Single-field | Ownership scoping |
-| `chatsessions` | `userId + updatedAt` | Compound | List sessions sorted by recency |
+FinSmart uses a modern, decoupled architecture:
+- **Frontend App**: A React application providing a localized, seamless user experience.
+- **Backend API**: An Express.js REST API that securely handles business logic and database operations.
+- **Database**: MongoDB for storing user profiles, transaction records, budgets, and chat sessions.
+- **AI Assistant**: Google Gemini for tailored financial insights.
 
 ---
 
@@ -358,50 +127,10 @@ FinSmart is organized into three tiers: a React frontend, an Express backend, an
 
 ## Project Structure
 
-```
-Week_5_Project/
-│
-├── 📁 backend/                        Express REST API
-│   ├── 📁 src/
-│   │   ├── 📁 config/                 Database connection, environment config
-│   │   ├── 📁 controllers/            Request handlers (user, transaction, budget, chat)
-│   │   ├── 📁 services/               Business logic (query builder, Gemini response generation)
-│   │   ├── 📁 repositories/           Data access layer (filter aggregations, financial context)
-│   │   ├── 📁 models/                 Mongoose schemas (User, Transaction, Budget, ChatSession)
-│   │   ├── 📁 routes/                 Express routers per resource
-│   │   ├── 📁 middlewares/            Auth, validation, error handling, no-cache
-│   │   ├── 📁 utils/                  Custom error class, Joi validation schemas
-│   │   ├── 📄 app.js                  Express application factory
-│   │   └── 📄 index.js                Server entry point (DB connect + listen)
-│   ├── 📄 package.json
-│   └── 📖 README.md                   Backend-specific documentation
-│
-├── 📁 frontend/                       React Single Page Application
-│   ├── 📁 src/
-│   │   ├── 📁 store/
-│   │   │   └── 📁 slices/             Redux slices (auth, chat, transactions, budget, security)
-│   │   ├── 📁 utils/                  Axios instance, class merge helper, formatters, validation
-│   │   ├── 📁 components/
-│   │   │   ├── 📁 common/             Button, Input, Modal, Loading, Logo, Route guards
-│   │   │   └── 📁 layout/             MainLayout, Sidebar, Navbar, nav items
-│   │   ├── 📁 pages/
-│   │   │   ├── 📁 auth/               Login, Register forms
-│   │   │   ├── 📁 landing/            Hero, Features, Security, Footer, PublicNavbar
-│   │   │   ├── 📁 dashboard/          Overview cards, cash flow chart, budget progress
-│   │   │   ├── 📁 transactions/       CRUD table, filters, pagination, modals
-│   │   │   ├── 📁 analytics/          Donut chart, category budget list
-│   │   │   ├── 📁 profile/            User info, budget config, password change
-│   │   │   ├── 📁 chat-widget/        FAB, chat panel, sessions sidebar, messages, input bar
-│   │   │   └── 📁 not-found/          404 error page
-│   │   ├── 📄 App.jsx                 Route definitions + auth bootstrap
-│   │   ├── 📄 main.jsx                Entry point (Redux Provider + Router)
-│   │   └── 📄 index.css               Tailwind config, custom theme, animations
-│   ├── 📄 vercel.json                 SPA rewrites + asset caching headers
-│   ├── 📄 package.json
-│   └── 📖 README.md                   Frontend-specific documentation
-│
-└── 📋 FinSmart_API.postman_collection.json    Postman collection with all endpoints
-```
+The repository is divided into two distinct applications:
+
+- `backend/`: The Express API and database models
+- `frontend/`: The React Single Page Application (SPA)
 
 > Each sub-project (`backend/`, `frontend/`) has its own `README.md` with in-depth documentation.
 
@@ -503,82 +232,13 @@ Base URL: `http://localhost:8000/api`
 
 ### Authentication
 
-| Method | Endpoint | Auth | Description |
-|:------:|----------|:----:|-------------|
-| `POST` | `/users/register` | — | Create account and auto-login |
-| `POST` | `/users/login` | — | Authenticate and receive JWT cookie |
-| `POST` | `/users/logout` | 🔒 | Clear JWT cookie and end session |
-| `GET` | `/users/me` | 🔒 | Get current user profile |
-| `PUT` | `/users/change-password` | 🔒 | Update password |
-
-### Transactions
-
-| Method | Endpoint | Auth | Description |
-|:------:|----------|:----:|-------------|
-| `GET` | `/transactions/filters` | 🔒 | Get available filter options (dynamic) |
-| `POST` | `/transactions` | 🔒 | Create a new transaction |
-| `GET` | `/transactions` | 🔒 | List transactions (paginated, filterable) |
-| `GET` | `/transactions/:id` | 🔒 | Get a single transaction |
-| `PUT` | `/transactions/:id` | 🔒 | Update a transaction |
-| `DELETE` | `/transactions/:id` | 🔒 | Delete a transaction |
-
-### Budgets
-
-| Method | Endpoint | Auth | Description |
-|:------:|----------|:----:|-------------|
-| `POST` | `/budgets` | 🔒 | Set or update monthly budget (upsert) |
-| `GET` | `/budgets` | 🔒 | Get budget for a specific month/year |
-| `GET` | `/budgets/summary` | 🔒 | Budget vs actual spending summary |
-
-### AI Chat
-
-| Method | Endpoint | Auth | Description |
-|:------:|----------|:----:|-------------|
-| `POST` | `/chat/message` | 🔒 | Send a message (creates or continues session) |
-| `GET` | `/chat/sessions` | 🔒 | List all chat sessions |
-| `GET` | `/chat/sessions/:id` | 🔒 | Get session with full message history |
-| `DELETE` | `/chat/sessions/:id` | 🔒 | Delete a chat session |
-
-### Health
-
-| Method | Endpoint | Auth | Description |
-|:------:|----------|:----:|-------------|
-| `GET` | `/` | — | Returns `"Server is running"` |
-
-> 🔒 = Requires authentication via HTTP-only cookie
->
-> 📦 A complete Postman collection is included: `FinSmart_API.postman_collection.json`
-
----
-
-## Authentication
-
 FinSmart uses **cookie-based sessions** instead of storing JWT tokens in localStorage. This eliminates the risk of XSS-based token theft.
 
 ### Flow Overview
 
-```
-┌──────────────┐     ┌──────────────┐     ┌──────────────┐     ┌──────────────┐
-│   Register   │     │    Login     │     │  Protected   │     │   Logout     │
-│   or Login   │     │              │     │   Request    │     │              │
-└──────┬───────┘     └──────┬───────┘     └──────┬───────┘     └──────┬───────┘
-       │                    │                    │                    │
-       ▼                    ▼                    ▼                    ▼
-  POST /users/         POST /users/         Any protected        POST /users/
-  register or login    login                endpoint               logout
-       │                    │                    │                    │
-       ▼                    ▼                    ▼                    ▼
-  Backend creates      Backend verifies     Browser sends        Backend clears
-  user, hashes         password, generates  cookie automatic-    cookie (expiry
-  password, signs      JWT, sets HTTP-      ally via             set to past
-  JWT, sets cookie     only cookie          withCredentials      date)
-       │                    │                    │                    │
-       ▼                    ▼                    ▼                    ▼
-  201 + user data      200 + user data      200 + requested      200 + success
-  returned             returned             data returned        message
-```
+FinSmart employs a seamless login process where users receive a secure session cookie directly upon authentication. This ensures that subsequent API requests are automatically authorized without exposing sensitive tokens to browser environments.
 
-### Security Measures
+### Security Measures### Security Measures
 
 | Measure | Implementation |
 |---------|---------------|
@@ -597,21 +257,9 @@ FinSmart's AI assistant is powered by **Google Gemini 2.5 Flash** and answers qu
 
 ### How It Works
 
-```mermaid
-flowchart LR
-    A[User sends\nfirst message] --> B[Aggregate 12 months\nof financial data]
-    B --> C[Store as\ncontextSnapshot]
-    C --> D[Build system prompt\nwith user data + context]
-    D --> E[Send to\nGemini 2.5 Flash]
-    E --> F[Return AI\nresponse]
-    F --> G[Save session +\nappend to frontend]
+Whenever a user consults the AI assistant, FinSmart securely packages their recent financial transaction metrics (income, expenses, active budgets) into an anonymized request sent to the Gemini engine. As a result, the AI recognizes patterns and can generate precise, applicable advice on-the-fly.
 
-    style A fill:#10b981,color:#fff
-    style F fill:#8E75B2,color:#fff
-    style G fill:#10b981,color:#fff
-```
-
-### Financial Context Captured
+### Financial Context Captured### Financial Context Captured
 
 On the first message of a session, the backend aggregates:
 
