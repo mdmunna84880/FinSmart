@@ -26,7 +26,7 @@ export const sendMessage = async (req, res, next) => {
     }
 
     if (!chatSession) {
-        const sessionTitle = generateChatTitle(message);
+        const sessionTitle = await generateChatTitle(message);
         chatSession = await ChatSession.create({
             userId: req.user._id,
             title: sessionTitle,

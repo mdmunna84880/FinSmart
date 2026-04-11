@@ -55,63 +55,51 @@ export const generateGeminiResponse = async (userMessage, financialContext, conv
     return aiResponse.response.text();
 };
 
-/** Generate a concise, descriptive title from the user's first message. */
-export const generateChatTitle = (userMessage) => {
-    const message = userMessage.trim();
+/** Generate a concise, descriptive title from the user's first message using AI. */
+export const generateChatTitle = async (userMessage) => {
+    const geminiModel = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
-    // Extract key financial keywords from the message
-    const financialKeywords = [
-        'income', 'expense', 'spending', 'budget', 'saving', 'savings',
-        'category', 'categories', 'trend', 'trends', 'cost', 'costs',
-        'reduce', 'reduce', 'cut', 'analyze', 'analysis', 'compare',
-        'comparison', 'total', 'summary', 'forecast', 'predict',
-        'groceries', 'entertainment', 'food', 'transport', 'rent',
-        'subscription', 'investment', 'debt', 'loan', 'credit'
-    ];
+    const prompt = `
+You are a title generator. Given a user message, generate a SHORT, DESCRIPTIVE title (max 50 characters) that captures the intent.
 
-    const lowerMessage = message.toLowerCase();
+RULES:
+- Max 3-5 words, concise and meaningful
+- Remove filler words like "show me", "my", "the", "I want to", etc.
+- Capitalize appropriately
+- No quotes, no punctuation at the end
+- Focus on the core topic/question
+- Return ONLY the title, nothing else
 
-    // Check if the message starts with a question word
-    const questionStarters = ['what', 'how', 'which', 'when', 'where', 'why', 'can', 'could', 'should', 'show', 'tell', 'analyze', 'compare', 'suggest'];
-    const startsWithQuestion = questionStarters.some(starter => lowerMessage.startsWith(starter));
+EXAMPLES:
+"Show me my expenses by category last month" → Expenses by Category Last Month
+"How much did I spend on groceries in March?" → Grocery Spending in March
+"Analyze my income trends for the past year" → Income Trends Past Year
+"Compare my spending between Q1 and Q2" → Q1 vs Q2 Spending Comparison
+"Where is most of my money going?" → Top Spending Categories
 
-    if (startsWithQuestion) {
-        // Remove question starter and create a statement-style title
-        let cleanedMessage = message;
-        for (const starter of questionStarters) {
-            if (lowerMessage.startsWith(starter)) {
-                cleanedMessage = message.slice(starter.length).trim();
-                break;
-            }
+USER MESSAGE: "${userMessage}"
+
+TITLE:
+`.trim();
+
+    try {
+        const result = await geminiModel.generateContent(prompt);
+        let title = result.response.text().trim();
+
+        // Clean up: remove quotes if AI adds them
+        title = title.replace(/^["']|["']$/g, '');
+
+        // Ensure max length
+        if (title.length > 50) {
+            title = title.slice(0, 47) + '...';
         }
-        // Capitalize first letter and limit length
-        const title = cleanedMessage.charAt(0).toUpperCase() + cleanedMessage.slice(1);
-        return title.length > 50 ? title.slice(0, 47) + '...' : title;
+
+        // Capitalize first letter if not already
+        return title.charAt(0).toUpperCase() + title.slice(1);
+    } catch (error) {
+        console.error('Error generating AI title:', error);
+        // Fallback to a simple title
+        const words = userMessage.trim().split(/\s+/).slice(0, 6).join(' ');
+        return words.charAt(0).toUpperCase() + words.slice(1) + '...';
     }
-
-    // For direct requests like "Show me..." or "Analyze my..."
-    const directPatterns = [
-        { pattern: /show\s+me\s+(.*)/i, format: (match) => match[1] },
-        { pattern: /analyze\s+(.*)/i, format: (match) => `Analysis: ${match[1]}` },
-        { pattern: /compare\s+(.*)/i, format: (match) => `Comparison: ${match[1]}` },
-        { pattern: /suggest\s+(.*)/i, format: (match) => `Suggestions: ${match[1]}` },
-    ];
-
-    for (const { pattern, format } of directPatterns) {
-        const match = message.match(pattern);
-        if (match) {
-            const title = format(match);
-            const formattedTitle = title.charAt(0).toUpperCase() + title.slice(1);
-            return formattedTitle.length > 50 ? formattedTitle.slice(0, 47) + '...' : formattedTitle;
-        }
-    }
-
-    // Fallback: use the first meaningful words from the message
-    const words = message.split(/\s+/);
-    if (words.length <= 6) {
-        return message.charAt(0).toUpperCase() + message.slice(1);
-    }
-
-    const truncatedTitle = words.slice(0, 6).join(' ');
-    return truncatedTitle.charAt(0).toUpperCase() + truncatedTitle.slice(1) + '...';
 };
